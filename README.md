@@ -17,7 +17,7 @@ Not finished yet.
            test
     ```
 
-2. Install python wda client (TODO)
+2. Install python wda client
 
 	```
 	pip install --pre facebook-wda
