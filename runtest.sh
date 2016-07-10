@@ -6,4 +6,5 @@ then
 	echo "Skip in travis"
 fi
 
+export PYTHONPATH=$PWD:$PYTHONPATH
 python tests/test_client.py

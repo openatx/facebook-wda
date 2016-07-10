@@ -11,5 +11,12 @@ def test_status():
     print c.status()
 
 
+def test_session():
+    c = wda.Client(__target)
+    sess = c.session('com.supercell.magic')
+    print sess
+
+
 if __name__ == '__main__':
     test_status()
+    test_session()
