@@ -17,10 +17,10 @@ Not finished yet.
            test
     ```
 
-2. Install python-wda (TODO)
+2. Install python wda client (TODO)
 
 	```
-	pip install wda
+	pip install --pre facebook-wda
 	```
 
 ## How to use
