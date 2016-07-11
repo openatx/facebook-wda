@@ -4,7 +4,19 @@
 
 import json
 import requests
-from urlparse import urljoin
+import urlparse
+
+
+def urljoin(*urls):
+    """
+    The default urlparse.urljoin behavior look strange
+    Standard urlparse.urljoin('http://a.com/foo', '/bar')
+    Expect: http://a.com/foo/bar
+    Actually: http://a.com/bar
+
+    This function fix that.
+    """
+    return reduce(urlparse.urljoin, [u.strip('/')+'/' for u in urls if u.strip('/')], '').rstrip('/')
 
 
 class _ElementObject(object):
@@ -37,15 +49,22 @@ class _ElementObject(object):
 
 class Session(object):
     def __init__(self, target, session_id):
-        self._target = target
+        self._target = target.rstrip('/')
         self._sid = session_id
 
     def __str__(self):
         return 'wda.Session (id=%s)' % self._sid
 
-    def tap(self, x, y):
-        pass
+    def _request(self, base_url, method='POST', data=None):
+        func = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
+        url = urljoin(self._target, 'session', self._sid, base_url)
+        print base_url, url
+        res = func(url, data=data)
+        return res.json()
 
+    def tap(self, x, y):
+        return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
+        
     def long_tap(self, x, y):
         pass
 
@@ -53,7 +72,7 @@ class Session(object):
         pass
 
     def close(self):
-        pass
+        return self._request('/', 'DELETE')
 
     def __call__(self, text=None, class_name=None):
         pass

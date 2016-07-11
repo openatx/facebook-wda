@@ -11,10 +11,7 @@ Not finished yet.
 	And start WDA with command
 
 	```
-	xcodebuild -project WebDriverAgent.xcodeproj \
-           -scheme WebDriverAgentRunner \
-           -destination 'platform=iOS Simulator,name=iPhone 6' \
-           test
+	xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination 'platform=iOS Simulator,name=iPhone 6' test
     ```
 
 2. Install python wda client
@@ -29,8 +26,25 @@ import wda
 
 c = wda.Client('http://localhost:8100')
 print c.status()
+
+s = c.session('com.apple.Health')
+s.tap(200, 200)
+s.close()
 ```
 
+## iOS Build-in Apps
+|   Name | Bundle ID          |
+|--------|--------------------|
+| iMovie | com.apple.iMovie |
+| Chrome | com.google.chrome.ios |
+| Apple Store | com.apple.AppStore |
+| Weather | com.apple.weather |
+| Camera | com.apple.camera |
+| iBooks | com.apple.iBooks |
+| Health | com.apple.Health |
+| Desktop | com.apple.springboard |
+
+ 
 ## DESIGN
 [DESIGN](DESIGN.md)
 
