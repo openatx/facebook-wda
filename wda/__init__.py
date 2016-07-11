@@ -19,9 +19,37 @@ def urljoin(*urls):
     return reduce(urlparse.urljoin, [u.strip('/')+'/' for u in urls if u.strip('/')], '').rstrip('/')
 
 
-class _ElementObject(object):
-    def __init__(self, elem_id):
-        self._id = elem_id
+class Selector(object):
+    __alias = dict(Button='XCUIElementTypeButton')
+
+    def __init__(self, base_url, text=None, label=None, class_name=None):
+        self._base_url = base_url
+        self._text = text
+        self._class_name = class_name
+
+    def _request(self, data, method='POST'):
+        func = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
+        res = func(self._base_url, data=data)
+        return res.json()
+
+    @property
+    def elements(self):
+        """
+        xpath: //XCUIElementTypeButton[@name='Share']
+        """
+        value = "name={name}".format(name=self._text)
+        # value = "[@name='{name}']".format(name=self._text)
+        # data = json.dumps(dict(using='xpath', value=value))
+        print self._base_url
+        data = json.dumps(dict(using='link text', value=value))
+        print data
+        # TODO(ssx): filter by class name
+        return self._request(data)['value']
+
+    @property
+    def exists(self):
+        return len(self.elements) > 0
+    
 
     def set_text(self, text):
         pass
@@ -65,17 +93,41 @@ class Session(object):
     def tap(self, x, y):
         return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
         
-    def long_tap(self, x, y):
-        pass
+    def dump(self):
+        """ Bad """
+        return self._request('source', 'GET')
 
-    def rect(self):
-        pass
+    @property
+    def orientation(self):
+        """
+        Return string
+        One of <PORTRAIT | >
+        """
+        return self._request('orientation', 'GET')['value']
+
+
+    # def long_tap(self, x, y):
+    #     pass
+
+    # def set_text(self, text):
+    #     return self._request('/element/0/value', data=json.dumps(dict(value=list(text))))
+
+    def window_size(self):
+        """
+        Return dict:
+        For example:
+
+        {"width": 400, "height": 200}
+        """
+        return self._request('/window/0/size', 'GET')['value']
 
     def close(self):
         return self._request('/', 'DELETE')
 
-    def __call__(self, text=None, class_name=None):
-        pass
+    def __call__(self, **kwargs):
+        if kwargs.get('className'):
+            kwargs['class_name'] = kwargs.get('class_name') or kwargs.get('className')
+        return Selector(urljoin(self._target, '/session', self._sid, 'elements'), **kwargs)
 
 
 class Client(object):
