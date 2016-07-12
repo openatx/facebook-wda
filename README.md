@@ -68,7 +68,11 @@ is not working.
 What I get the element id is a very long string, like this.
 
 ```json
-{u'label': u'Dashboard', u'type': u'XCUIElementTypeStaticText', u'ELEMENT': u'FDFA10CA-4E13-431A-8199-8AD1ADDB4AF2'}
+{
+	"label": "Dashboard", 
+	"type": "XCUIElementTypeStaticText", 
+	"ELEMENT": "FDFA10CA-4E13-431A-8199-8AD1ADDB4AF2"
+}
 ```
 
 But when I follow the instructions in WDA Repository README
