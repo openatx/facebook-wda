@@ -7,4 +7,4 @@ then
 fi
 
 export PYTHONPATH=$PWD:$PYTHONPATH
-python tests/test_client.py
+ipython tests/test_client.py

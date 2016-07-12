@@ -11,6 +11,7 @@ __target = os.getenv("DEVICE_TARGET") or 'http://localhost:8100'
 def test_status():
     c = wda.Client(__target)
     print c.status()
+    c.screenshot()
 
 
 def test_session():

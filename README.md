@@ -26,11 +26,38 @@ import wda
 
 c = wda.Client('http://localhost:8100')
 print c.status()
+c.screenshot('screen.png')
+c.home()
 
 s = c.session('com.apple.Health')
+print s.orientation # expect PORTRAIT
+print s.window_size
 s.tap(200, 200)
-s.close()
+print s(text="Dashboard").elements
+# not working function
+# s(text="Dashboard").tap()
+s.close() # kill app
 ```
+
+## Wired Problem
+```
+s(text="Dashboard").tap()
+```
+is not working.
+
+What I get the element id is a very long string, like this.
+
+```
+{u'label': u'Dashboard', u'type': u'XCUIElementTypeStaticText', u'ELEMENT': u'FDFA10CA-4E13-431A-8199-8AD1ADDB4AF2'}
+```
+
+But when I follow the instructions in WDA Repository README
+
+```
+curl -X POST -d "" $DEVICE_URL/session/$SESSION_ID/element/FDFA10CA-4E13-431A-8199-8AD1ADDB4AF2/click
+```
+
+Nothing happends. Need help
 
 ## iOS Build-in Apps
 |   Name | Bundle ID          |
