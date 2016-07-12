@@ -1,5 +1,8 @@
 # python-wda
 [![Build Status](https://travis-ci.org/codeskyblue/python-wda.svg?branch=master)](https://travis-ci.org/codeskyblue/python-wda)
+[![PyPI](https://img.shields.io/pypi/v/facebook-wda.svg)](https://pypi.python.org/pypi/facebook-wda)
+[![PyPI](https://img.shields.io/pypi/dm/facebook-wda.svg)](https://pypi.python.org/pypi/facebook-wda)
+[![PyPI](https://img.shields.io/pypi/l/facebook-wda.svg)]()
 
 Facebook WebDriverAgent Python Client Library (not official)
 
@@ -31,6 +34,7 @@ c = wda.Client('http://localhost:8100')
 
 # Show status
 print c.status()
+
 # Press home button
 c.home()
 ```
@@ -45,24 +49,45 @@ Open app
 
 ```py
 with c.session('com.apple.Health') as s:
-	# One of <PORTRAIT | LANDSCAPE>
-	print s.orientation # expect PORTRAIT
-	# Get width and height
-	print s.window_size
-	# Simulate touch
-	s.tap(200, 200)
-	# Find elements
-	print s(text="Dashboard").exists
-	# Find second element, index from 0
-	print s(text="Dashboard")[1]
-	# Tap selected element
-	s(text="Dashboard", className='Button').tap()
-	# Set text
-	s(text="Name").set_text("Hello")
-	# Clear text
-	s(text="Name").clear_text()
-	
-	# s.close() # kill app, no need to call in with
+	print s.orientation
+```
+
+Same as
+
+```py
+s = c.session('com.apple.Health')
+print s.orientation
+s.close()
+```
+
+Session operations
+
+```
+# One of <PORTRAIT | LANDSCAPE>
+print s.orientation # expect PORTRAIT
+
+# Get width and height
+print s.window_size
+
+# Simulate touch
+s.tap(200, 200)
+
+# Find elements
+print s(text="Dashboard").exists
+
+# Find second element, index from 0
+print s(text="Dashboard")[1]
+
+# Tap selected element
+s(text="Dashboard", className='Button').tap()
+
+# Set text
+s(text="Name").set_text("Hello")
+
+# Clear text
+s(text="Name").clear_text()
+
+# s.close() # kill app, no need to call in with
 ```
 
 ## iOS Build-in Apps
