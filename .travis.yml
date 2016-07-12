@@ -7,7 +7,6 @@ install:
 script:
 - bash ./runtest.sh
 deploy:
-  matrix:
   - provider: pypi
     user: codeskyblue
     password:
