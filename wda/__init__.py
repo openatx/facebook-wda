@@ -54,7 +54,15 @@ class Selector(object):
         data = json.dumps(dict(using='link text', value=value))
         print data
         # TODO(ssx): filter by class name
-        return self._request(data)['value']
+        response = self._request(data)['value']
+        print response
+        elems = []
+        for elem in response: 
+            if self._class_name and elem['type'] != self._class_name:
+                continue
+            elems.append(elem)
+
+        return elems
 
     def clone(self):
         return copy.deepcopy(self)
@@ -73,17 +81,52 @@ class Selector(object):
     @property
     def exists(self):
         return len(self.elements) > 0
-    
-    def set_text(self, text):
-        pass
-
-    def clear_text(self):
-        pass
 
     def tap(self):
-        """ TODO: shit, not working at all """
-        eid = self.elements[0]['ELEMENT']
+        eid = self.elements[self._index]['ELEMENT']
         return self._request("", suburl='element/%s/click' % eid)
+
+    def _property(self, name, data='', method='GET'):
+        eid = self.elements[self._index]['ELEMENT']
+        return self._request(data, suburl='element/%s/%s' % (eid, name), method=method)['value']
+
+    def set_text(self, text):
+        """ Not tested """
+        return self._property('value', data=json.dumps({'value': list(text)}), method='POST')
+
+    def clear_text(self):
+        return self._property('clear', method='POST')
+
+    @property
+    def enabled(self):
+        """ true or false """
+        return self._property('enabled')
+
+    @property
+    def accessible(self):
+        """ true or false """
+        return self._property('enabled')
+
+    @property
+    def displayed(self):
+        """ true or false """
+        return self._property('enabled')
+    
+    @property
+    def location(self):
+        """
+        Return like
+        {"x": 2, "y": 200}
+        """
+        return self._property('location')
+    
+    @property
+    def size(self):
+        """
+        Return like
+        {"width": 2, "height": 200}
+        """
+        return self._property('size')
 
     def click(self):
         return self.tap()
@@ -149,12 +192,12 @@ class Session(object):
 
     def __call__(self, **kwargs):
         if kwargs.get('className'):
-            kwargs['class_name'] = kwargs.get('class_name') or kwargs.get('className')
+            kwargs['class_name'] = kwargs.get('class_name') or kwargs.pop('className')
         return Selector(urljoin(self._target, '/session', self._sid), **kwargs)
 
 
 class Client(object):
-    def __init__(self, target):
+    def __init__(self, target='http://127.0.0.1:8100'):
         """
         Args:
             - target(string): base URL of your iPhone, ex http://10.0.0.1:8100

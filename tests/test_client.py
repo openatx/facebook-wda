@@ -30,8 +30,8 @@ def test_set_text():
         print 'switch to element'
         time.sleep(3)
         print s.orientation
-        print s(text='Month').elements
-        print s(text='Dashboard').elements
+        # print s(text='Month').elements
+        print s(text='Dashboard', class_name='Button').elements
         # s.set_text("Hello world")
         time.sleep(3)
 

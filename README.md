@@ -52,36 +52,18 @@ with c.session('com.apple.Health') as s:
 	# Simulate touch
 	s.tap(200, 200)
 	# Find elements
-	print s(text="Dashboard").elements
+	print s(text="Dashboard").exists
+	# Find second element, index from 0
+	print s(text="Dashboard")[1]
+	# Tap selected element
+	s(text="Dashboard", className='Button').tap()
+	# Set text
+	s(text="Name").set_text("Hello")
+	# Clear text
+	s(text="Name").clear_text()
 	
-	# not working function
-	# s(text="Dashboard").tap()
 	# s.close() # kill app, no need to call in with
 ```
-
-## Unresolved Problem
-```py
-s(text="Dashboard").tap()
-```
-is not working.
-
-What I get the element id is a very long string, like this.
-
-```json
-{
-	"label": "Dashboard", 
-	"type": "XCUIElementTypeStaticText", 
-	"ELEMENT": "FDFA10CA-4E13-431A-8199-8AD1ADDB4AF2"
-}
-```
-
-But when I follow the instructions in WDA Repository README
-
-```sh
-curl -X POST -d "" $DEVICE_URL/session/$SESSION_ID/element/FDFA10CA-4E13-431A-8199-8AD1ADDB4AF2/click
-```
-
-Nothing happends. Need help
 
 ## iOS Build-in Apps
 |   Name | Bundle ID          |
