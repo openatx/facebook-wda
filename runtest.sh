@@ -4,7 +4,8 @@
 if test -n "$TRAVIS"
 then
 	echo "Skip in travis"
+	exit 0
 fi
 
 export PYTHONPATH=$PWD:$PYTHONPATH
-ipython tests/test_client.py
+python tests/test_client.py

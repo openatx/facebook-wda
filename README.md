@@ -1,4 +1,6 @@
 # python-wda
+[![Build Status](https://travis-ci.org/codeskyblue/python-wda.svg?branch=master)](https://travis-ci.org/codeskyblue/python-wda)
+
 Facebook WebDriverAgent Python Client Library (not official)
 
 Not finished yet.
