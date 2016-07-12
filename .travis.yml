@@ -1,0 +1,23 @@
+language: python
+python:
+- "2.7"
+install:
+- "pip install -r requirements.txt"
+- "pip install -r tests/requirements.txt"
+script:
+- bash ./runtest.sh
+deploy:
+  - provider: pypi
+    user: codeskyblue
+    password:
+      secure: gP+Fo/jBmk32PW2p01wSX/qL6rj6Y7X+ZZ1XLHKUXtBCwVQtAvYtqlevVIKuvima4DDjF4YYzZFN1XLGt3j10MRKKNHrn8pV7I90KqvLk2uodmBASn0HGnGRCEFyJDgkCJT9BqOXbfATcxtMt5yBpf1HRk9f4CQvW3yuKfqd8kSyUnDYN7xHQBAxqYrlihW6jZ0yb38fx8WNvmjRxNknoUsr9m8qO7vfkbAaff+AwBG39UTOFrGpRk909/BVLze69vEyupJurNQDN01MP7IumwbCaG2wYTqC8T1OYm4huBQqhI+AhG2fkznAS2FEL/3NGDLZGjPfsozEnyahwt6NQl6idBumBlSaZcFoO0ulROa1yVEuBA8ODgk9zH9pADcuo3Yg7fgkHZ0FNwrqEBbEEG0c8q6rv3a/aBFDVXTTmvKLUMS83bkafMuMGCH+pm5KBV6wD/Bq0PXjeY6PXo9ucPQFWCeaIsWPsaYso668aYMSqStbaoReg4iDgC95uNHBnba59SbMWj3ASW/1nmsgaXYzov1H2lIEMuS0OO5h+gtC/ft+Alja/qVhEUN9+SpQz5St9KHfMBsIw/O9hucCx/egsmge9Wxdr18fTlesGDUs3Quco5vZwJuscutf1dHTylwORwQKJztnRoyQoHY6v5lMqbmoI/xs72H6mcCaHlk=
+    distributions: sdist bdist_wheel
+  - provider: pypi
+    user: codeskyblue
+    password:
+      secure: gP+Fo/jBmk32PW2p01wSX/qL6rj6Y7X+ZZ1XLHKUXtBCwVQtAvYtqlevVIKuvima4DDjF4YYzZFN1XLGt3j10MRKKNHrn8pV7I90KqvLk2uodmBASn0HGnGRCEFyJDgkCJT9BqOXbfATcxtMt5yBpf1HRk9f4CQvW3yuKfqd8kSyUnDYN7xHQBAxqYrlihW6jZ0yb38fx8WNvmjRxNknoUsr9m8qO7vfkbAaff+AwBG39UTOFrGpRk909/BVLze69vEyupJurNQDN01MP7IumwbCaG2wYTqC8T1OYm4huBQqhI+AhG2fkznAS2FEL/3NGDLZGjPfsozEnyahwt6NQl6idBumBlSaZcFoO0ulROa1yVEuBA8ODgk9zH9pADcuo3Yg7fgkHZ0FNwrqEBbEEG0c8q6rv3a/aBFDVXTTmvKLUMS83bkafMuMGCH+pm5KBV6wD/Bq0PXjeY6PXo9ucPQFWCeaIsWPsaYso668aYMSqStbaoReg4iDgC95uNHBnba59SbMWj3ASW/1nmsgaXYzov1H2lIEMuS0OO5h+gtC/ft+Alja/qVhEUN9+SpQz5St9KHfMBsIw/O9hucCx/egsmge9Wxdr18fTlesGDUs3Quco5vZwJuscutf1dHTylwORwQKJztnRoyQoHY6v5lMqbmoI/xs72H6mcCaHlk=
+    distributions: sdist bdist_wheel
+    on:
+      tags: true
+# after_deploy:
+#   - "curl -X POST https://readthedocs.org/build/atx"
