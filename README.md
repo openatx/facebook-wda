@@ -62,7 +62,7 @@ s.close()
 
 Session operations
 
-```
+```py
 # One of <PORTRAIT | LANDSCAPE>
 print s.orientation # expect PORTRAIT
 
