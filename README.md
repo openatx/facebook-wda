@@ -23,13 +23,10 @@ Not finished yet.
 	```
 
 ## How to use
-```
-import wda
-```
-
 Create a client
 
-```
+```py
+import wda
 c = wda.Client('http://localhost:8100')
 
 # Show status
@@ -40,13 +37,13 @@ c.home()
 
 Take screenshot
 
-```
+```py
 c.screenshot('screen.png')
 ```
 
 Open app
 
-```
+```py
 with c.session('com.apple.Health') as s:
 	# One of <PORTRAIT | LANDSCAPE>
 	print s.orientation # expect PORTRAIT
@@ -63,20 +60,20 @@ with c.session('com.apple.Health') as s:
 ```
 
 ## Unresolved Problem
-```
+```py
 s(text="Dashboard").tap()
 ```
 is not working.
 
 What I get the element id is a very long string, like this.
 
-```
+```json
 {u'label': u'Dashboard', u'type': u'XCUIElementTypeStaticText', u'ELEMENT': u'FDFA10CA-4E13-431A-8199-8AD1ADDB4AF2'}
 ```
 
 But when I follow the instructions in WDA Repository README
 
-```
+```sh
 curl -X POST -d "" $DEVICE_URL/session/$SESSION_ID/element/FDFA10CA-4E13-431A-8199-8AD1ADDB4AF2/click
 ```
 
