@@ -25,23 +25,44 @@ Not finished yet.
 ## How to use
 ```
 import wda
-
-c = wda.Client('http://localhost:8100')
-print c.status()
-c.screenshot('screen.png')
-c.home()
-
-s = c.session('com.apple.Health')
-print s.orientation # expect PORTRAIT
-print s.window_size
-s.tap(200, 200)
-print s(text="Dashboard").elements
-# not working function
-# s(text="Dashboard").tap()
-s.close() # kill app
 ```
 
-## Wired Problem
+Create a client
+
+```
+c = wda.Client('http://localhost:8100')
+
+# Show status
+print c.status()
+# Press home button
+c.home()
+```
+
+Take screenshot
+
+```
+c.screenshot('screen.png')
+```
+
+Open app
+
+```
+with c.session('com.apple.Health') as s:
+	# One of <PORTRAIT | LANDSCAPE>
+	print s.orientation # expect PORTRAIT
+	# Get width and height
+	print s.window_size
+	# Simulate touch
+	s.tap(200, 200)
+	# Find elements
+	print s(text="Dashboard").elements
+	
+	# not working function
+	# s(text="Dashboard").tap()
+	# s.close() # kill app, no need to call in with
+```
+
+## Unresolved Problem
 ```
 s(text="Dashboard").tap()
 ```

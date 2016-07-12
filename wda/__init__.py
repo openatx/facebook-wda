@@ -104,6 +104,12 @@ class Session(object):
     def __str__(self):
         return 'wda.Session (id=%s)' % self._sid
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
     def _request(self, base_url, method='POST', data=None):
         func = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
         url = urljoin(self._target, 'session', self._sid, base_url)
@@ -211,3 +217,7 @@ class Client(object):
             with open(png_filename, 'w') as f:
                 f.write(raw_value)
         return raw_value
+
+    def source(self):
+        # TODO: not tested
+        return self._request('source', 'POST')['value']

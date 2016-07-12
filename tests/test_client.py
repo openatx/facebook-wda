@@ -26,15 +26,15 @@ def test_session():
 
 def test_set_text():
     c = wda.Client(__target)
-    s = c.session('com.apple.Health')
-    print 'switch to element'
-    time.sleep(3)
-    print s.orientation
-    print s(text='Month').elements
-    print s(text='Dashboard').elements
-    # s.set_text("Hello world")
-    time.sleep(3)
-    s.close()
+    with c.session('com.apple.Health') as s:
+        print 'switch to element'
+        time.sleep(3)
+        print s.orientation
+        print s(text='Month').elements
+        print s(text='Dashboard').elements
+        # s.set_text("Hello world")
+        time.sleep(3)
+
 
 if __name__ == '__main__':
     test_status()
