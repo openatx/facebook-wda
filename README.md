@@ -8,6 +8,8 @@ Facebook WebDriverAgent Python Client Library (not official)
 
 Most functions finished.
 
+Implemented apis describe in <https://github.com/facebook/WebDriverAgent/wiki/Queries>
+
 ## Installation
 1. You need to start WebDriverAgent by yourself
 
@@ -100,6 +102,42 @@ s(text="Name").clear_text()
 
 # s.close() # kill app, no need to call in with
 ```
+
+Properties
+
+```py
+e = s(text='Dashboard')
+e.count # same as len(e)
+
+# bool props
+e.exists
+e.accessible
+e.displayed
+e.enabled
+
+# return json
+e.rect # ex: {u'origin': {u'y': 0, u'x': 0}, u'size': {u'width': 85, u'height': 20}}
+
+# other
+e.text # ex: Dashboard
+e.class_name # ex: XCUIElementTypeStaticText
+```
+
+## TODO
+Alert operation not implemented, also longTap, drag, pinch(not found in WDA)
+
+Design:
+
+```py
+print s.alert.text()
+s.alert.accept()
+s.alert.dismiss()
+```
+
+TouchID
+
+* Match Touch ID
+* Do not match Touch ID
 
 ## iOS Build-in Apps
 |   Name | Bundle ID          |
