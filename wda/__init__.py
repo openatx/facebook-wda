@@ -25,7 +25,7 @@ def urljoin(*urls):
 class Selector(object):
     def __init__(self, base_url, text=None, label=None, class_name=None, index=0):
         self._base_url = base_url
-        self._text = text
+        self._text = text.encode('utf-8') if text else ''
         self._class_name = class_name
         self._index = index
         if class_name and not class_name.startswith('XCUIElementType'):
@@ -46,22 +46,29 @@ class Selector(object):
             {u'label': None, u'type': u'XCUIElementTypeNavigationBar', u'ELEMENT': u'786F9BB6-7734-4B52-B341-09030256C3A6'},
             {u'label': u'Dashboard', u'type': u'XCUIElementTypeButton', u'ELEMENT': u'504C94B5-742D-4757-B954-096EE3512018'}
         ]
+
+        Raises:
+            SyntaxError
         """
-        value = "name={name}".format(name=self._text)
-        # value = "[@name='{name}']".format(name=self._text)
-        # data = json.dumps(dict(using='xpath', value=value))
-        print self._base_url
-        data = json.dumps(dict(using='link text', value=value))
-        print data
-        # TODO(ssx): filter by class name
+        if self._text:
+            using = 'link text'
+            value = 'name={name}'.format(name=self._text)
+        elif self._class_name:
+            using = 'class name'
+            value = self._class_name
+        else:
+            raise SyntaxError("text or className must be set at least one")
+
+        data = json.dumps({'using': using, 'value': value})
         response = self._request(data)['value']
-        print response
+        # print response
         elems = []
         for elem in response: 
-            if self._class_name and elem['type'] != self._class_name:
+            if self._class_name and elem.get('type') != self._class_name:
+                continue
+            if self._text and elem.get('label') != self._text:
                 continue
             elems.append(elem)
-
         return elems
 
     def clone(self):
@@ -129,6 +136,7 @@ class Selector(object):
         return self._property('size')
 
     def click(self):
+        """ Alias of tap """
         return self.tap()
 
     @property
