@@ -6,14 +6,16 @@
 
 Facebook WebDriverAgent Python Client Library (not official)
 
-Not finished yet.
+Most functions finished.
 
 ## Installation
 1. You need to start WebDriverAgent by yourself
 
 	Follow the instructions in <https://github.com/facebook/WebDriverAgent>
 
-	And start WDA with command
+	It is better to start with Xcode to prevent CodeSign issues.
+
+	But it is also ok to start WDA with command line.
 
 	```
 	xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination 'platform=iOS Simulator,name=iPhone 6' test
@@ -24,6 +26,13 @@ Not finished yet.
 	```
 	pip install --pre facebook-wda
 	```
+
+## TCP connection over USB (optional)
+You can use wifi network, it is very convinient, but not very stable enough.
+
+I found a tools named `iproxy` which can forward device port to localhost, it\'s source code is here <https://github.com/libimobiledevice/libusbmuxd>
+
+The usage is very simple `iproxy <local port> <remote port> [udid]`
 
 ## How to use
 Create a client
@@ -67,7 +76,9 @@ Session operations
 print s.orientation # expect PORTRAIT
 
 # Get width and height
-print s.window_size
+print s.window_size()
+# Expect json output
+# For example: {u'height': 736, u'width': 414}
 
 # Simulate touch
 s.tap(200, 200)
