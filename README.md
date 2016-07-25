@@ -1,7 +1,6 @@
 # python-wda
 [![Build Status](https://travis-ci.org/codeskyblue/facebook-wda.svg?branch=master)](https://travis-ci.org/codeskyblue/facebook-wda)
 [![PyPI](https://img.shields.io/pypi/v/facebook-wda.svg)](https://pypi.python.org/pypi/facebook-wda)
-[![PyPI](https://img.shields.io/pypi/dm/facebook-wda.svg)](https://pypi.python.org/pypi/facebook-wda)
 [![PyPI](https://img.shields.io/pypi/l/facebook-wda.svg)]()
 
 Facebook WebDriverAgent Python Client Library (not official)
