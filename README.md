@@ -9,6 +9,8 @@ Most functions finished.
 
 Implemented apis describe in <https://github.com/facebook/WebDriverAgent/wiki/Queries>
 
+This library has been used in project atx <https://github.com/codeskyblue/AutomatorX>
+
 ## Installation
 1. You need to start WebDriverAgent by yourself
 
