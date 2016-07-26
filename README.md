@@ -154,7 +154,10 @@ TouchID
 
 ## Reference
 [Source code](https://github.com/facebook/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBElementCommands.m#L62)
- 
+
+## Articles
+* <https://testerhome.com/topics/5524> By [diaojunxiam](https://github.com/diaojunxian)
+
 ## DESIGN
 [DESIGN](DESIGN.md)
 
