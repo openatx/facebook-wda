@@ -7,9 +7,10 @@ import urlparse
 import base64
 import copy
 import time
+import re
 
 import requests
-
+import xcui_element_types
 
 def urljoin(*urls):
     """
@@ -32,6 +33,9 @@ class Selector(object):
         self._index = index
         if class_name and not class_name.startswith('XCUIElementType'):
             self._class_name = 'XCUIElementType' + class_name.title()
+        if xpath and not xpath.startswith('//XCUIElementType'):
+            element =  '|'.join(xcui_element_types.xcui_element)
+            self._xpath = re.sub(r'/('+element+')', '/XCUIElementType\g<1>', xpath)
 
     def _request(self, data, suburl='elements', method='POST'):
         func = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
@@ -61,7 +65,6 @@ class Selector(object):
         elif self._xpath:
             using = 'xpath'
             value = self._xpath
-            value = '/'+value[1:].replace('/','/XCUIElementType')
         else:
             raise SyntaxError("text or className must be set at least one")
 
