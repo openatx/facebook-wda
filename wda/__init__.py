@@ -24,10 +24,11 @@ def urljoin(*urls):
 
 
 class Selector(object):
-    def __init__(self, base_url, text=None, label=None, class_name=None, index=0):
+    def __init__(self, base_url, text=None, label=None, class_name=None, xpath=None, index=0):
         self._base_url = base_url
         self._text = unicode(text) if text else None
         self._class_name = unicode(class_name) if class_name else None
+        self._xpath = unicode(xpath) if xpath else None
         self._index = index
         if class_name and not class_name.startswith('XCUIElementType'):
             self._class_name = 'XCUIElementType' + class_name.title()
@@ -57,6 +58,10 @@ class Selector(object):
         elif self._class_name:
             using = 'class name'
             value = self._class_name
+        elif self._xpath:
+            using = 'xpath'
+            value = self._xpath
+            value = '/'+value[1:].replace('/','/XCUIElementType')
         else:
             raise SyntaxError("text or className must be set at least one")
 
