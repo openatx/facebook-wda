@@ -86,6 +86,9 @@ print s.window_size()
 # Simulate touch
 s.tap(200, 200)
 
+# Simulate swipe
+s.swipe(x1, y1, x2, y2, 0.5) # 0.5s
+
 # Find elements
 print s(text="Dashboard").exists
 
@@ -94,6 +97,9 @@ print s(text="Dashboard")[1]
 
 # Tap selected element
 s(text="Dashboard", className='Button').tap()
+
+# Tap and hold
+s(text="Dashboard").tap_hold(2.0) # tapAndHold for 2.0s
 
 # Set text
 s(text="Name").set_text("Hello")

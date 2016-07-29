@@ -122,6 +122,20 @@ class Selector(object):
         element = self.wait(timeout)
         eid = element['ELEMENT']
         return self._request("", suburl='element/%s/click' % eid)
+    
+    def tap_hold(self, duration=1.0, timeout=None):
+        """
+        Tap and hold for a moment
+
+        Args:
+            - duration(float): seconds of hold time
+
+        [[FBRoute POST:@"/uiaElement/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
+        """
+        element = self.wait(timeout)
+        eid = element['ELEMENT']
+        data = json.dumps({'duration': duration})
+        return self._request(data, suburl='uiaElement/%s/touchAndHold' % eid)
 
     def double_tap(self, x, y):
         """
@@ -135,12 +149,6 @@ class Selector(object):
 
         // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
         // what ios-driver did and sadly, we must copy them.
-        """
-        raise NotImplementedError()
-
-    def touch_hold(self, x, y, duration):
-        """
-        [[FBRoute POST:@"/uiaElement/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
         """
         raise NotImplementedError()
 
