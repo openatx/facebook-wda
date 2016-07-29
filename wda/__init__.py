@@ -231,13 +231,12 @@ class Session(object):
     def tap(self, x, y):
         return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
 
-    def swipe(self, x1, y1, x2, y2, duration=0.5):
+    def swipe(self, x1, y1, x2, y2, duration=0.2):
         """
         duration(float) not sure the unit, need to test so that you can known
 
         [[FBRoute POST:@"/uiaTarget/:uuid/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDrag:)],
         """
-        raise NotImplementedError()
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
         return self._request('/uiaTarget/0/dragfromtoforduration', data=json.dumps(data))
         
