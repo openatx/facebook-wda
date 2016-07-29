@@ -1,7 +1,6 @@
 # python-wda
-[![Build Status](https://travis-ci.org/codeskyblue/facebook-wda.svg?branch=master)](https://travis-ci.org/codeskyblue/facebook-wda)
+[![Build Status](https://travis-ci.org/openatx/facebook-wda.svg?branch=master)](https://travis-ci.org/openatx/facebook-wda)
 [![PyPI](https://img.shields.io/pypi/v/facebook-wda.svg)](https://pypi.python.org/pypi/facebook-wda)
-[![PyPI](https://img.shields.io/pypi/dm/facebook-wda.svg)](https://pypi.python.org/pypi/facebook-wda)
 [![PyPI](https://img.shields.io/pypi/l/facebook-wda.svg)]()
 
 Facebook WebDriverAgent Python Client Library (not official)
@@ -9,6 +8,8 @@ Facebook WebDriverAgent Python Client Library (not official)
 Most functions finished.
 
 Implemented apis describe in <https://github.com/facebook/WebDriverAgent/wiki/Queries>
+
+This library has been used in project atx <https://github.com/codeskyblue/AutomatorX>
 
 ## Installation
 1. You need to start WebDriverAgent by yourself
@@ -153,7 +154,10 @@ TouchID
 
 ## Reference
 [Source code](https://github.com/facebook/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBElementCommands.m#L62)
- 
+
+## Articles
+* <https://testerhome.com/topics/5524> By [diaojunxiam](https://github.com/diaojunxian)
+
 ## DESIGN
 [DESIGN](DESIGN.md)
 
