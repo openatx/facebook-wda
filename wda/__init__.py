@@ -71,6 +71,17 @@ class Selector(object):
         data = json.dumps({'using': using, 'value': value})
         response = self._request(data)['value']
         elems = []
+        for elem in response: 
+            if self._class_name and elem.get('type') != self._class_name:
+                continue
+            #if self._text and elem.get('label') != self._text:
+            #    continue
+            #eid = elem.get('ELEMENT')
+            #if not self._property('displayed', eid=eid): # Since you can't see it, it is better to ignore it.
+            #    continue
+            # maybe need to judge location here.
+            elems.append(elem)
+            
         for elem in response:
             if self._class_name and elem.get('type') != self._class_name:
                 continue
