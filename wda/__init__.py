@@ -70,15 +70,9 @@ class Selector(object):
 
         data = json.dumps({'using': using, 'value': value})
         response = self._request(data)['value']
-        # print response
         elems = []
-        for elem in response: 
+        for elem in response:
             if self._class_name and elem.get('type') != self._class_name:
-                continue
-            if self._text and elem.get('label') != self._text:
-                continue
-            eid = elem.get('ELEMENT')
-            if not self._property('displayed', eid=eid): # Since you can't see it, it is better to ignore it.
                 continue
             elems.append(elem)
         return elems
@@ -123,6 +117,21 @@ class Selector(object):
         eid = element['ELEMENT']
         return self._request("", suburl='element/%s/click' % eid)
 
+    
+    def tap_hold(self, duration=1.0, timeout=None):
+        """
+        Tap and hold for a moment
+
+        Args:
+            - duration(float): seconds of hold time
+
+        [[FBRoute POST:@"/uiaElement/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
+        """
+        element = self.wait(timeout)
+        eid = element['ELEMENT']
+        data = json.dumps({'duration': duration})
+        return self._request(data, suburl='uiaElement/%s/touchAndHold' % eid)
+
     def double_tap(self, x, y):
         """
         [[FBRoute POST:@"/uiaElement/:uuid/doubleTap"] respondWithTarget:self action:@selector(handleDoubleTap:)],
@@ -135,12 +144,6 @@ class Selector(object):
 
         // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
         // what ios-driver did and sadly, we must copy them.
-        """
-        raise NotImplementedError()
-
-    def touch_hold(self, x, y, duration):
-        """
-        [[FBRoute POST:@"/uiaElement/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
         """
         raise NotImplementedError()
 
@@ -239,13 +242,12 @@ class Session(object):
     def tap(self, x, y):
         return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
 
-    def swipe(self, x1, y1, x2, y2, duration=0.5):
+    def swipe(self, x1, y1, x2, y2, duration=0.2):
         """
         duration(float) not sure the unit, need to test so that you can known
 
         [[FBRoute POST:@"/uiaTarget/:uuid/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDrag:)],
         """
-        raise NotImplementedError()
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
         return self._request('/uiaTarget/0/dragfromtoforduration', data=json.dumps(data))
         
