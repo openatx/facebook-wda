@@ -70,15 +70,9 @@ class Selector(object):
 
         data = json.dumps({'using': using, 'value': value})
         response = self._request(data)['value']
-        # print response
         elems = []
-        for elem in response: 
+        for elem in response:
             if self._class_name and elem.get('type') != self._class_name:
-                continue
-            if self._text and elem.get('label') != self._text:
-                continue
-            eid = elem.get('ELEMENT')
-            if not self._property('displayed', eid=eid): # Since you can't see it, it is better to ignore it.
                 continue
             elems.append(elem)
         return elems
@@ -122,6 +116,21 @@ class Selector(object):
         element = self.wait(timeout)
         eid = element['ELEMENT']
         return self._request("", suburl='element/%s/click' % eid)
+    
+    def tap_hold(self, duration=1.0, timeout=None):
+        """
+        Tap and hold for a moment
+
+        Args:
+            - duration(float): seconds of hold time
+
+        [[FBRoute POST:@"/uiaElement/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
+        """
+        element = self.wait(timeout)
+        eid = element['ELEMENT']
+        data = json.dumps({'duration': duration})
+        return self._request(data, suburl='uiaElement/%s/touchAndHold' % eid)
+
     
     def tap_hold(self, duration=1.0, timeout=None):
         """
