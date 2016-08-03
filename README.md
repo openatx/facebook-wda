@@ -122,8 +122,8 @@ e.accessible
 e.displayed
 e.enabled
 
-# return json
-e.rect # ex: {u'origin': {u'y': 0, u'x': 0}, u'size': {u'width': 85, u'height': 20}}
+# return namedtuple
+e.bounds # ex: Bounds(x=144, y=28, width=88.0, height=27.0)
 
 # other
 e.text # ex: Dashboard

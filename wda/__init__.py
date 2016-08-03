@@ -8,6 +8,7 @@ import base64
 import copy
 import time
 import re
+from collections import namedtuple
 
 import requests
 import xcui_element_types
@@ -34,7 +35,7 @@ class Selector(object):
         if class_name and not class_name.startswith('XCUIElementType'):
             self._class_name = 'XCUIElementType' + class_name.title()
         if xpath and not xpath.startswith('//XCUIElementType'):
-            element =  '|'.join(xcui_element_types.xcui_element)
+            element = '|'.join(xcui_element_types.xcui_element)
             self._xpath = re.sub(r'/('+element+')', '/XCUIElementType\g<1>', xpath)
 
     def _request(self, data, suburl='elements', method='POST'):
@@ -74,12 +75,11 @@ class Selector(object):
         for elem in response: 
             if self._class_name and elem.get('type') != self._class_name:
                 continue
-            #if self._text and elem.get('label') != self._text:
-            #    continue
             #eid = elem.get('ELEMENT')
             #if not self._property('displayed', eid=eid): # Since you can't see it, it is better to ignore it.
             #    continue
             # maybe need to judge location here.
+            # relevant pr: https://github.com/facebook/WebDriverAgent/pull/230
             elems.append(elem)
             
         for elem in response:
@@ -142,21 +142,6 @@ class Selector(object):
         data = json.dumps({'duration': duration})
         return self._request(data, suburl='uiaElement/%s/touchAndHold' % eid)
 
-    
-    def tap_hold(self, duration=1.0, timeout=None):
-        """
-        Tap and hold for a moment
-
-        Args:
-            - duration(float): seconds of hold time
-
-        [[FBRoute POST:@"/uiaElement/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
-        """
-        element = self.wait(timeout)
-        eid = element['ELEMENT']
-        data = json.dumps({'duration': duration})
-        return self._request(data, suburl='uiaElement/%s/touchAndHold' % eid)
-
     def double_tap(self, x, y):
         """
         [[FBRoute POST:@"/uiaElement/:uuid/doubleTap"] respondWithTarget:self action:@selector(handleDoubleTap:)],
@@ -200,12 +185,20 @@ class Selector(object):
     @property
     def rect(self):
         """
+        Depreciated, use bounds instead
         Include location and size
 
         Return example:
         {u'origin': {u'y': 0, u'x': 0}, u'size': {u'width': 85, u'height': 20}}
         """
         return self._property('rect')
+
+    @property
+    def bounds(self):
+        rect = self.rect
+        x, y = rect['origin']['x'], rect['origin']['y']
+        w, h = rect['size']['width'], rect['size']['height']
+        return namedtuple('Bounds', ['x', 'y', 'width', 'height'])(x, y, w, h)
     
     # @property
     # def location(self):
