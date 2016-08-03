@@ -120,14 +120,16 @@ class Selector(object):
     def wait(self, timeout=None):
         """
         Args:
-            - timeout(float): None means infinient
+            - timeout(float): None means 90s
 
         Returns:
             element(json) for example:
             {"label": "Dashboard"," "type": "XCUIElementTypeStaticText"," "ELEMENT": "E60237CB-5FD8-4D60-A6E4-F54B583931DF'}
         """
         start_time = time.time()
-        while timeout is None or start_time+timeout > time.time():
+        if timeout is None or timeout <= 0:
+            timeout = 90.0
+        while start_time+timeout > time.time():
             elems = self.elements
             if len(elems) <= self._index:
                 continue

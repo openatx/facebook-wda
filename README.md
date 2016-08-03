@@ -74,6 +74,8 @@ s.close()
 
 Session operations
 
+> Note: if element not found in 90s, RuntimeError will be raised
+
 ```py
 # One of <PORTRAIT | LANDSCAPE>
 print s.orientation # expect PORTRAIT
