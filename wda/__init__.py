@@ -74,6 +74,17 @@ class Selector(object):
         for elem in response:
             if self._class_name and elem.get('type') != self._class_name:
                 continue
+            #if self._text and elem.get('label') != self._text:
+            #    continue
+            #eid = elem.get('ELEMENT')
+            #if not self._property('displayed', eid=eid): # Since you can't see it, it is better to ignore it.
+            #    continue
+            # maybe need to judge location here.
+            elems.append(elem)
+
+        for elem in response:
+            if self._class_name and elem.get('type') != self._class_name:
+                continue
             elems.append(elem)
         return elems
 
@@ -117,7 +128,21 @@ class Selector(object):
         eid = element['ELEMENT']
         return self._request("", suburl='element/%s/click' % eid)
 
-    
+    def tap_hold(self, duration=1.0, timeout=None):
+        """
+        Tap and hold for a moment
+
+        Args:
+            - duration(float): seconds of hold time
+
+        [[FBRoute POST:@"/uiaElement/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
+        """
+        element = self.wait(timeout)
+        eid = element['ELEMENT']
+        data = json.dumps({'duration': duration})
+        return self._request(data, suburl='uiaElement/%s/touchAndHold' % eid)
+
+
     def tap_hold(self, duration=1.0, timeout=None):
         """
         Tap and hold for a moment
@@ -157,6 +182,13 @@ class Selector(object):
     def clear_text(self):
         return self._property('clear', method='POST')
 
+    def getAttribute(self, name):
+        """
+        get element attribute
+        //POST element/:uuid/attribute/:name
+        """
+        return self._property('attribute/%s' % name)
+
     @property
     def enabled(self):
         """ true or false """
@@ -181,7 +213,7 @@ class Selector(object):
         {u'origin': {u'y': 0, u'x': 0}, u'size': {u'width': 85, u'height': 20}}
         """
         return self._property('rect')
-    
+
     # @property
     # def location(self):
     #     """
@@ -189,7 +221,7 @@ class Selector(object):
     #     {"x": 2, "y": 200}
     #     """
     #     return self._property('location')
-    
+
     # @property
     # def size(self):
     #     """
@@ -213,7 +245,7 @@ class Selector(object):
     @property
     def text(self):
         return self._property('text')
-    
+
     def __len__(self):
         return self.count
 
@@ -250,7 +282,7 @@ class Session(object):
         """
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
         return self._request('/uiaTarget/0/dragfromtoforduration', data=json.dumps(data))
-        
+
     def dump(self):
         """ Bad """
         return self._request('source', 'GET')
@@ -335,7 +367,7 @@ class Client(object):
     def screenshot(self, png_filename=None):
         """
         Screenshot with PNG format
-        
+
         Args:
             - png_filename(string): optional, save file name
 
