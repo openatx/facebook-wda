@@ -182,12 +182,17 @@ class Selector(object):
     def clear_text(self):
         return self._property('clear', method='POST')
 
-    def getAttribute(self, name):
+    def attribute(self, name):
         """
         get element attribute
         //POST element/:uuid/attribute/:name
         """
         return self._property('attribute/%s' % name)
+
+    @property
+    def value(self):
+        """true or false"""
+        return self.attribute('value')
 
     @property
     def enabled(self):
