@@ -161,14 +161,21 @@ class Selector(object):
         """
         raise NotImplementedError()
 
-    def scroll(self):
+    def scroll(self, name, timeout=None):
         """
         The comment in WDA source code looks funny
 
         // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
         // what ios-driver did and sadly, we must copy them.
+        Example:
+            session(class_name='Table').scroll('Developer')
+            session(text='Developer').tap()
         """
-        raise NotImplementedError()
+        element = self.wait(timeout)
+        eid = element['ELEMENT']
+        data = json.dumps({'name': name})
+        return self._request(data, suburl='uiaElement/{elem_id}/scroll'.format(elem_id=eid))
+
 
     def _property(self, name, data='', method='GET', timeout=None, eid=None):
         eid = eid or self.wait(timeout)['ELEMENT']
