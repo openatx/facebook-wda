@@ -35,8 +35,18 @@ def test_set_text():
         # s.set_text("Hello world")
         time.sleep(3)
 
+def test_scroll():
+    c = wda.Client(__target)
+    with c.session('com.apple.Preferences') as s:
+        s(class_name='Table').scroll('Developer')
+        s(text='Developer').tap()
+        time.sleep(3)
+        
+
+
 
 if __name__ == '__main__':
     test_status()
     test_set_text()
+    test_scroll()
     # test_session()
