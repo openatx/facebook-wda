@@ -132,6 +132,18 @@ e.text # ex: Dashboard
 e.class_name # ex: XCUIElementTypeStaticText
 ```
 
+Scroll
+
+```py
+c = wda.Client(__target)
+with c.session('com.apple.Preferences') as s:
+	s(class_name='Table').scroll('Developer')
+	s(text='Developer').tap()
+```
+
+
+e = s(text='Dashboard')
+
 ## TODO
 Alert operation not implemented, also longTap, drag, pinch(not found in WDA)
 
