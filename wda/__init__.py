@@ -161,21 +161,39 @@ class Selector(object):
         """
         raise NotImplementedError()
 
-    def scroll(self, name, timeout=None):
+    def scroll(self, text=None, text_contains=None, direction=None, timeout=None):
         """
-        The comment in WDA source code looks funny
+        Scroll to somewhere, if no args provided, scroll to self visible
 
+        Args:
+            - text (string): element name equals text
+            - text_contains (string): element contains text(donot use it now)
+            - direction (string): one of <up|down|left|right>
+            - timeout (float): timeout to find start element
+
+        Example:
+            s(text="Hello").scroll() # scroll to visible
+            s(text="Hello").scroll(text="World")
+            s(text="Hello").scroll(text_contains="World")
+            s(text="Hello").scroll(direction="right", timeout=5.0)
+
+        The comment in WDA source code looks funny
         // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
         // what ios-driver did and sadly, we must copy them.
-        Example:
-            session(class_name='Table').scroll('Developer')
-            session(text='Developer').tap()
         """
+        text_contains = None # will raise Coredump of WDA
+
         element = self.wait(timeout)
         eid = element['ELEMENT']
-        data = json.dumps({'name': name})
+        if text:
+            data = json.dumps({'name': text})
+        elif text_contains:
+            data = json.dumps({'predicateString': text})
+        elif direction:
+            data = json.dumps({'direction': direction})
+        else:
+            data = json.dumps({'toVisible': True})
         return self._request(data, suburl='uiaElement/{elem_id}/scroll'.format(elem_id=eid))
-
 
     def _property(self, name, data='', method='GET', timeout=None, eid=None):
         eid = eid or self.wait(timeout)['ELEMENT']
@@ -232,20 +250,15 @@ class Selector(object):
         w, h = rect['size']['width'], rect['size']['height']
         return namedtuple('Bounds', ['x', 'y', 'width', 'height'])(x, y, w, h)
     
+    # Recommend use bounds() method instead
     # @property
     # def location(self):
-    #     """
-    #     Return like
-    #     {"x": 2, "y": 200}
-    #     """
+    #     Return like  #     {"x": 2, "y": 200}
     #     return self._property('location')
 
     # @property
     # def size(self):
-    #     """
-    #     Return like
-    #     {"width": 2, "height": 200}
-    #     """
+    #     Return like {"width": 2, "height": 200}
     #     return self._property('size')
 
     def click(self, *args, **kwargs):

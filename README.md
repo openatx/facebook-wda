@@ -109,6 +109,9 @@ s(text="Name").set_text("Hello")
 # Clear text
 s(text="Name").clear_text()
 
+# Scroll to visible
+s(text="Name").scroll()
+
 # s.close() # kill app, no need to call in with
 ```
 
@@ -165,6 +168,10 @@ TouchID
 
 ## Articles
 * <https://testerhome.com/topics/5524> By [diaojunxiam](https://github.com/diaojunxian)
+
+## Contributors
+* [diaojunxian](https://github.com/diaojunxian)
+* [iquicktest](https://github.com/iquicktest)
 
 ## DESIGN
 [DESIGN](DESIGN.md)
