@@ -24,6 +24,15 @@ def urljoin(*urls):
     """
     return reduce(urlparse.urljoin, [u.strip('/')+'/' for u in urls if u.strip('/')], '').rstrip('/')
 
+def httpdo(url, method='GET', data=None):
+    """
+    Do HTTP Request
+    """
+    if isinstance(data, dict):
+        data = json.dumps(data)
+    fn = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
+    res = fn(url, data=data)
+    return res.json()
 
 class Selector(object):
     def __init__(self, base_url, text=None, label=None, class_name=None, xpath=None, index=0):
@@ -39,9 +48,10 @@ class Selector(object):
             self._xpath = re.sub(r'/('+element+')', '/XCUIElementType\g<1>', xpath)
 
     def _request(self, data, suburl='elements', method='POST'):
-        func = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
-        res = func(urljoin(self._base_url, suburl), data=data)
-        return res.json()
+        return httpdo(urljoin(self._base_url, suburl), method, data=data)
+        # func = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
+        # res = func(urljoin(self._base_url, suburl), data=data)
+        # return res.json()
 
     @property
     def elements(self):
@@ -75,28 +85,13 @@ class Selector(object):
         for elem in response: 
             if self._class_name and elem.get('type') != self._class_name:
                 continue
-            #eid = elem.get('ELEMENT')
-            #if not self._property('displayed', eid=eid): # Since you can't see it, it is better to ignore it.
-            #    continue
             # maybe need to judge location here.
             # relevant pr: https://github.com/facebook/WebDriverAgent/pull/230
-            elems.append(elem)
-            
-        for elem in response:
-            if self._class_name and elem.get('type') != self._class_name:
-                continue
-            #if self._text and elem.get('label') != self._text:
-            #    continue
             #eid = elem.get('ELEMENT')
             #if not self._property('displayed', eid=eid): # Since you can't see it, it is better to ignore it.
             #    continue
-            # maybe need to judge location here.
             elems.append(elem)
 
-        for elem in response:
-            if self._class_name and elem.get('type') != self._class_name:
-                continue
-            elems.append(elem)
         return elems
 
     def clone(self):
@@ -140,6 +135,10 @@ class Selector(object):
         element = self.wait(timeout)
         eid = element['ELEMENT']
         return self._request("", suburl='element/%s/click' % eid)
+
+    def click(self, *args, **kwargs):
+        """ Alias of tap """
+        return self.tap(*args, **kwargs)
     
     def tap_hold(self, duration=1.0, timeout=None):
         """
@@ -171,11 +170,15 @@ class Selector(object):
             - direction (string): one of <up|down|left|right>
             - timeout (float): timeout to find start element
 
+        Returns:
+            self
+
         Example:
             s(text="Hello").scroll() # scroll to visible
             s(text="Hello").scroll(text="World")
             s(text="Hello").scroll(text_contains="World")
             s(text="Hello").scroll(direction="right", timeout=5.0)
+            s(text="Login").scroll().click()
 
         The comment in WDA source code looks funny
         // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
@@ -193,13 +196,19 @@ class Selector(object):
             data = json.dumps({'direction': direction})
         else:
             data = json.dumps({'toVisible': True})
-        return self._request(data, suburl='uiaElement/{elem_id}/scroll'.format(elem_id=eid))
+        self._request(data, suburl='uiaElement/{elem_id}/scroll'.format(elem_id=eid))
+        return self
 
     def _property(self, name, data='', method='GET', timeout=None, eid=None):
-        eid = eid or self.wait(timeout)['ELEMENT']
+        if not eid:
+            eid = self.wait(timeout)['ELEMENT']
+        if isinstance(data, dict):
+            data = json.dumps(data)
         return self._request(data, suburl='element/%s/%s' % (eid, name), method=method)['value']
 
-    def set_text(self, text):
+    def set_text(self, text, clear=False):
+        if clear:
+            self.clear_text()
         return self._property('value', data=json.dumps({'value': list(text)}), method='POST')
 
     def clear_text(self):
@@ -260,10 +269,6 @@ class Selector(object):
     # def size(self):
     #     Return like {"width": 2, "height": 200}
     #     return self._property('size')
-
-    def click(self, *args, **kwargs):
-        """ Alias of tap """
-        return self.tap(*args, **kwargs)
 
     @property
     def count(self):
@@ -414,4 +419,4 @@ class Client(object):
 
     def source(self):
         # TODO: not tested
-        return self._request('source', 'POST')['value']
+        return self._request('source', 'GET')['value']
