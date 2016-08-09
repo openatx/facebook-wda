@@ -13,6 +13,9 @@ from collections import namedtuple
 import requests
 import xcui_element_types
 
+DEBUG = False
+
+
 def urljoin(*urls):
     """
     The default urlparse.urljoin behavior look strange
@@ -30,9 +33,55 @@ def httpdo(url, method='GET', data=None):
     """
     if isinstance(data, dict):
         data = json.dumps(data)
+    if DEBUG:
+        print "Shell: curl -X {method} -d '{data}' '{url}'".format(method=method, data=data or '', url=url)
+
     fn = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
     res = fn(url, data=data)
-    return res.json()
+    ret = res.json()
+    if DEBUG:
+        print 'Return:', json.dumps(ret, indent=4)
+    return ret
+
+
+class Rect(object):
+    def __init__(self, x, y, width, height):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+    def __str__(self):
+        return 'Rect(x={x}, y={y}, width={w}, height={h})'.format(
+            x=self.x, y=self.y, w=self.width, h=self.height)
+
+    def __repr__(self):
+        return str(self)
+
+    @property
+    def center(self):
+        return namedtuple('Point', ['x', 'y'])(self.x+self.width/2, self.y+self.height/2)
+
+    @property
+    def origin(self):
+        return namedtuple('Point', ['x', 'y'])(self.x, self.y)
+
+    @property
+    def left(self):
+        return self.x
+
+    @property
+    def top(self):
+        return self.y
+
+    @property
+    def right(self):
+        return self.x+self.width
+
+    @property
+    def bottom(self):
+        return self.y+self.height
+    
 
 class Selector(object):
     def __init__(self, base_url, text=None, label=None, class_name=None, xpath=None, index=0):
@@ -49,9 +98,6 @@ class Selector(object):
 
     def _request(self, data, suburl='elements', method='POST'):
         return httpdo(urljoin(self._base_url, suburl), method, data=data)
-        # func = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
-        # res = func(urljoin(self._base_url, suburl), data=data)
-        # return res.json()
 
     @property
     def elements(self):
@@ -85,13 +131,7 @@ class Selector(object):
         for elem in response: 
             if self._class_name and elem.get('type') != self._class_name:
                 continue
-            # maybe need to judge location here.
-            # relevant pr: https://github.com/facebook/WebDriverAgent/pull/230
-            #eid = elem.get('ELEMENT')
-            #if not self._property('displayed', eid=eid): # Since you can't see it, it is better to ignore it.
-            #    continue
             elems.append(elem)
-
         return elems
 
     def clone(self):
@@ -242,24 +282,17 @@ class Selector(object):
         return self._property('displayed')
 
     @property
-    def rect(self):
-        """
-        Depreciated, use bounds instead
-        Include location and size
-
-        Return example:
-        {u'origin': {u'y': 0, u'x': 0}, u'size': {u'width': 85, u'height': 20}}
-        """
-        return self._property('rect')
-
-    @property
     def bounds(self):
-        rect = self.rect
-        x, y = rect['origin']['x'], rect['origin']['y']
-        w, h = rect['size']['width'], rect['size']['height']
-        return namedtuple('Bounds', ['x', 'y', 'width', 'height'])(x, y, w, h)
-    
-    # Recommend use bounds() method instead
+        """
+        Return example:
+            Rect(x=144, y=28, width=88, height=27)
+        """
+        value = self._property('rect')
+        x, y = value['origin']['x'], value['origin']['y']
+        w, h = value['size']['width'], value['size']['height']
+        return Rect(x, y, w, h)
+
+    # Recommend use bounds method instead
     # @property
     # def location(self):
     #     Return like  #     {"x": 2, "y": 200}
@@ -301,11 +334,8 @@ class Session(object):
         self.close()
 
     def _request(self, base_url, method='POST', data=None):
-        func = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
         url = urljoin(self._target, 'session', self._sid, base_url)
-        # print base_url, url
-        res = func(url, data=data)
-        return res.json()
+        return httpdo(url, method, data)
 
     def tap(self, x, y):
         return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
@@ -331,17 +361,15 @@ class Session(object):
         """
         return self._request('orientation', 'GET')['value']
 
-    # def set_text(self, text):
-    #     return self._request('/element/0/value', data=json.dumps(dict(value=list(text))))
-
     def window_size(self):
         """
-        Return dict:
-        For example:
+        Return namedtuple
 
-        {"width": 400, "height": 200}
+        For example:
+            Size(width=320, height=568)
         """
-        return self._request('/window/0/size', 'GET')['value']
+        value = self._request('/window/0/size', 'GET')['value']
+        return namedtuple('Size', ['width', 'height'])(value['width'], value['height'])
 
     def close(self):
         return self._request('/', 'DELETE')
@@ -361,9 +389,7 @@ class Client(object):
         self._target = target
 
     def _request(self, base_url, method='GET', data=None):
-        func = dict(GET=requests.get, POST=requests.post)[method]
-        res = func(urljoin(self._target, base_url), data=data)
-        return res.json()
+        return httpdo(urljoin(self._target, base_url), method, data)
 
     def status(self):
         return self._request('status')['value']

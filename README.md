@@ -42,6 +42,10 @@ Create a client
 
 ```py
 import wda
+
+# Enable debug will see http Request and Response
+# wda.DEBUG = True
+
 c = wda.Client('http://localhost:8100')
 
 # Show status
@@ -128,7 +132,8 @@ e.displayed
 e.enabled
 
 # return namedtuple
-e.bounds # ex: Bounds(x=144, y=28, width=88.0, height=27.0)
+e.bounds # ex: Rect(x=144, y=28, width=88.0, height=27.0)
+e.bounds.x # expect 144
 
 # other
 e.text # ex: Dashboard
