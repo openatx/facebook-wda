@@ -167,7 +167,6 @@ TouchID
 | 相机Camera | com.apple.camera |
 | iBooks | com.apple.iBooks |
 | Health | com.apple.Health |
-| Desktop | com.apple.springboard |
 | Settings | com.apple.Preferences |
 | Watch | com.apple.Bridge |
 | Game Center | com.apple.gamecenter |
@@ -179,6 +178,7 @@ TouchID
 | 日历 | com.apple.mobilecal |
 | 信息 | com.apple.MobileSMS |
 | 时钟 | com.apple.mobiletimer |
+| Desktop | com.apple.springboard (调用这个会导致机器重启) |
 
 **第三方应用**
 
