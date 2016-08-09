@@ -157,16 +157,42 @@ TouchID
 * Do not match Touch ID
 
 ## iOS Build-in Apps
+**苹果自带应用**
+
 |   Name | Bundle ID          |
 |--------|--------------------|
 | iMovie | com.apple.iMovie |
-| Chrome | com.google.chrome.ios |
 | Apple Store | com.apple.AppStore |
 | Weather | com.apple.weather |
-| Camera | com.apple.camera |
+| 相机Camera | com.apple.camera |
 | iBooks | com.apple.iBooks |
 | Health | com.apple.Health |
 | Desktop | com.apple.springboard |
+| Settings | com.apple.Preferences |
+| Watch | com.apple.Bridge |
+| Game Center | com.apple.gamecenter |
+| Wallet | com.apple.Passbook |
+| 电话 | com.apple.mobilephone |
+| 备忘录 | com.apple.mobilenotes |
+| 指南针 | com.apple.compass |
+| 浏览器 | com.apple.mobilesafari |
+| 日历 | com.apple.mobilecal |
+| 信息 | com.apple.MobileSMS |
+| 时钟 | com.apple.mobiletimer |
+
+**第三方应用**
+
+|   Name | Bundle ID          |
+|--------|--------------------|
+| 腾讯QQ | com.tencent.mqq |
+| 微信 | com.tencent.xin |
+| 照片 | com.apple.mobileslideshow |
+| 部落冲突 | com.supercell.magic |
+| 钉钉 | com.laiwang.DingTalk |
+| Skype | com.skype.tomskype |
+| 提醒事项 | com.apple.reminders |
+| Chrome | com.google.chrome.ios |
+
 
 ## Reference
 [Source code](https://github.com/facebook/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBElementCommands.m#L62)
