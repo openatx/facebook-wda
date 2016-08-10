@@ -16,6 +16,13 @@ import xcui_element_types
 DEBUG = False
 
 
+def convert(dictionary):
+    """
+    Convert dict to namedtuple
+    """
+    return namedtuple('GenericDict', dictionary.keys())(**dictionary)
+
+
 def urljoin(*urls):
     """
     The default urlparse.urljoin behavior look strange
@@ -27,6 +34,10 @@ def urljoin(*urls):
     """
     return reduce(urlparse.urljoin, [u.strip('/')+'/' for u in urls if u.strip('/')], '').rstrip('/')
 
+def roundint(i):
+    return int(round(i, 0))
+
+
 def httpdo(url, method='GET', data=None):
     """
     Do HTTP Request
@@ -37,11 +48,23 @@ def httpdo(url, method='GET', data=None):
         print "Shell: curl -X {method} -d '{data}' '{url}'".format(method=method, data=data or '', url=url)
 
     fn = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
-    res = fn(url, data=data)
-    ret = res.json()
+    response = fn(url, data=data)
+    retjson = response.json()
     if DEBUG:
-        print 'Return:', json.dumps(ret, indent=4)
-    return ret
+        print 'Return:', json.dumps(retjson, indent=4)
+    r = convert(retjson)
+    if r.status != 0:
+        raise WDAError(r.status, r.value)
+    return r
+
+
+class WDAError(Exception):
+    def __init__(self, status, value):
+        self.status = status
+        self.value = value
+
+    def __str__(self):
+        return 'WDAError(status=%d, value=%s)' % (self.status, self.value)
 
 
 class Rect(object):
@@ -83,8 +106,136 @@ class Rect(object):
         return self.y+self.height
     
 
+class Client(object):
+    def __init__(self, target='http://127.0.0.1:8100'):
+        """
+        Args:
+            - target(string): base URL of your iPhone, ex http://10.0.0.1:8100
+        """
+        self._target = target
+
+    def _request(self, base_url, method='GET', data=None):
+        return httpdo(urljoin(self._target, base_url), method, data)
+
+    def status(self):
+        return self._request('status').value
+
+    def home(self):
+        """ Press home button """
+        return self._request('homescreen', 'POST')
+
+    def session(self, bundle_id):
+        """
+        Args:
+            - bundle_id(str): the app bundle id
+
+        WDA Return json like
+
+        {
+            "value": {
+                "sessionId": "69E6FDBA-8D59-4349-B7DE-A9CA41A97814",
+                "capabilities": {
+                    "device": "iphone",
+                    "browserName": "部落冲突",
+                    "sdkVersion": "9.3.2",
+                    "CFBundleIdentifier": "com.supercell.magic"
+                }
+            },
+            "sessionId": "69E6FDBA-8D59-4349-B7DE-A9CA41A97814",
+            "status": 0
+        }
+        """
+        data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
+        res = self._request('session', 'POST', data=data)
+        return Session(self._target, res.sessionId)
+
+    def screenshot(self, png_filename=None):
+        """
+        Screenshot with PNG format
+
+        Args:
+            - png_filename(string): optional, save file name
+
+        Returns:
+            png raw data
+        """
+        value = self._request('screenshot').value
+        raw_value = base64.b64decode(value)
+        if png_filename:
+            with open(png_filename, 'w') as f:
+                f.write(raw_value)
+        return raw_value
+
+    def source(self):
+        # TODO: not tested
+        return self._request('source', 'GET').value
+
+
+class Session(object):
+    def __init__(self, target, session_id):
+        self._target = target.rstrip('/')
+        self._sid = session_id
+
+    def __str__(self):
+        return 'wda.Session (id=%s)' % self._sid
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def _request(self, base_url, method='POST', data=None):
+        url = urljoin(self._target, 'session', self._sid, base_url)
+        return httpdo(url, method, data)
+
+    def tap(self, x, y):
+        return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
+
+    def swipe(self, x1, y1, x2, y2, duration=0.2):
+        """
+        duration(float) not sure the unit, need to test so that you can known
+
+        [[FBRoute POST:@"/uiaTarget/:uuid/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDrag:)],
+        """
+        data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
+        return self._request('/uiaTarget/0/dragfromtoforduration', data=json.dumps(data))
+
+    def dump(self):
+        """ Bad """
+        return self._request('source', 'GET')
+
+    @property
+    def orientation(self):
+        """
+        Return string
+        One of <PORTRAIT | LANDSCAPE>
+        """
+        return self._request('orientation', 'GET').value
+
+    def window_size(self):
+        """
+        Return namedtuple
+
+        For example:
+            Size(width=320, height=568)
+        """
+        value = self._request('/window/0/size', 'GET').value
+        w = roundint(value['width'])
+        h = roundint(value['height'])
+        return namedtuple('Size', ['width', 'height'])(w, h)
+
+    def close(self):
+        return self._request('/', 'DELETE')
+
+    def __call__(self, **kwargs):
+        if kwargs.get('className'):
+            kwargs['class_name'] = kwargs.get('class_name') or kwargs.pop('className')
+        return Selector(urljoin(self._target, '/session', self._sid), **kwargs)
+
+
 class Selector(object):
-    def __init__(self, base_url, text=None, label=None, class_name=None, xpath=None, index=0):
+    def __init__(self, base_url, text=None, class_name=None, xpath=None, index=0):
         self._base_url = base_url
         self._text = unicode(text) if text else None
         self._class_name = unicode(class_name) if class_name else None
@@ -126,7 +277,7 @@ class Selector(object):
             raise SyntaxError("text or className must be set at least one")
 
         data = json.dumps({'using': using, 'value': value})
-        response = self._request(data)['value']
+        response = self._request(data).value
         elems = []
         for elem in response: 
             if self._class_name and elem.get('type') != self._class_name:
@@ -244,7 +395,7 @@ class Selector(object):
             eid = self.wait(timeout)['ELEMENT']
         if isinstance(data, dict):
             data = json.dumps(data)
-        return self._request(data, suburl='element/%s/%s' % (eid, name), method=method)['value']
+        return self._request(data, suburl='element/%s/%s' % (eid, name), method=method).value
 
     def set_text(self, text, clear=False):
         if clear:
@@ -317,132 +468,3 @@ class Selector(object):
 
     def __len__(self):
         return self.count
-
-
-class Session(object):
-    def __init__(self, target, session_id):
-        self._target = target.rstrip('/')
-        self._sid = session_id
-
-    def __str__(self):
-        return 'wda.Session (id=%s)' % self._sid
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
-
-    def _request(self, base_url, method='POST', data=None):
-        url = urljoin(self._target, 'session', self._sid, base_url)
-        return httpdo(url, method, data)
-
-    def tap(self, x, y):
-        return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
-
-    def swipe(self, x1, y1, x2, y2, duration=0.2):
-        """
-        duration(float) not sure the unit, need to test so that you can known
-
-        [[FBRoute POST:@"/uiaTarget/:uuid/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDrag:)],
-        """
-        data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
-        return self._request('/uiaTarget/0/dragfromtoforduration', data=json.dumps(data))
-
-    def dump(self):
-        """ Bad """
-        return self._request('source', 'GET')
-
-    @property
-    def orientation(self):
-        """
-        Return string
-        One of <PORTRAIT | LANDSCAPE>
-        """
-        return self._request('orientation', 'GET')['value']
-
-    def window_size(self):
-        """
-        Return namedtuple
-
-        For example:
-            Size(width=320, height=568)
-        """
-        value = self._request('/window/0/size', 'GET')['value']
-        return namedtuple('Size', ['width', 'height'])(value['width'], value['height'])
-
-    def close(self):
-        return self._request('/', 'DELETE')
-
-    def __call__(self, **kwargs):
-        if kwargs.get('className'):
-            kwargs['class_name'] = kwargs.get('class_name') or kwargs.pop('className')
-        return Selector(urljoin(self._target, '/session', self._sid), **kwargs)
-
-
-class Client(object):
-    def __init__(self, target='http://127.0.0.1:8100'):
-        """
-        Args:
-            - target(string): base URL of your iPhone, ex http://10.0.0.1:8100
-        """
-        self._target = target
-
-    def _request(self, base_url, method='GET', data=None):
-        return httpdo(urljoin(self._target, base_url), method, data)
-
-    def status(self):
-        return self._request('status')['value']
-
-    def home(self):
-        """ Press home button """
-        return self._request('homescreen', 'POST')
-
-    def session(self, bundle_id):
-        """
-        Args:
-            - bundle_id(str): the app bundle id
-
-        WDA Return json like
-
-        {
-            "value": {
-                "sessionId": "69E6FDBA-8D59-4349-B7DE-A9CA41A97814",
-                "capabilities": {
-                    "device": "iphone",
-                    "browserName": "部落冲突",
-                    "sdkVersion": "9.3.2",
-                    "CFBundleIdentifier": "com.supercell.magic"
-                }
-            },
-            "sessionId": "69E6FDBA-8D59-4349-B7DE-A9CA41A97814",
-            "status": 0
-        }
-        """
-        data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
-        res = self._request('session', 'POST', data=data)
-        session_id = res.get('sessionId')
-        if session_id is None:
-            raise RuntimeError("WDA session start failed.")
-        return Session(self._target, session_id)
-
-    def screenshot(self, png_filename=None):
-        """
-        Screenshot with PNG format
-
-        Args:
-            - png_filename(string): optional, save file name
-
-        Returns:
-            png raw data
-        """
-        value = self._request('screenshot')['value']
-        raw_value = base64.b64decode(value)
-        if png_filename:
-            with open(png_filename, 'w') as f:
-                f.write(raw_value)
-        return raw_value
-
-    def source(self):
-        # TODO: not tested
-        return self._request('source', 'GET')['value']

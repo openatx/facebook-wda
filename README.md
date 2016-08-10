@@ -45,9 +45,15 @@ import wda
 
 # Enable debug will see http Request and Response
 # wda.DEBUG = True
-
 c = wda.Client('http://localhost:8100')
+```
 
+A `wda.WDAError` will be raised if communite with WDA went wrong.
+
+
+Other APIs
+
+```py
 # Show status
 print c.status()
 
@@ -178,6 +184,8 @@ TouchID
 | 日历 | com.apple.mobilecal |
 | 信息 | com.apple.MobileSMS |
 | 时钟 | com.apple.mobiletimer |
+| 照片 | com.apple.mobileslideshow |
+| 提醒事项 | com.apple.reminders |
 | Desktop | com.apple.springboard (调用这个会导致机器重启) |
 
 **第三方应用**
@@ -186,11 +194,9 @@ TouchID
 |--------|--------------------|
 | 腾讯QQ | com.tencent.mqq |
 | 微信 | com.tencent.xin |
-| 照片 | com.apple.mobileslideshow |
 | 部落冲突 | com.supercell.magic |
 | 钉钉 | com.laiwang.DingTalk |
 | Skype | com.skype.tomskype |
-| 提醒事项 | com.apple.reminders |
 | Chrome | com.google.chrome.ios |
 
 
