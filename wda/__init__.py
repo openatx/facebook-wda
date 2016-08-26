@@ -8,9 +8,20 @@ import base64
 import copy
 import time
 import re
+from collections import namedtuple
 
 import requests
 import xcui_element_types
+
+DEBUG = False
+
+
+def convert(dictionary):
+    """
+    Convert dict to namedtuple
+    """
+    return namedtuple('GenericDict', dictionary.keys())(**dictionary)
+
 
 def urljoin(*urls):
     """
@@ -23,9 +34,217 @@ def urljoin(*urls):
     """
     return reduce(urlparse.urljoin, [u.strip('/')+'/' for u in urls if u.strip('/')], '').rstrip('/')
 
+def roundint(i):
+    return int(round(i, 0))
+
+
+def httpdo(url, method='GET', data=None):
+    """
+    Do HTTP Request
+    """
+    if isinstance(data, dict):
+        data = json.dumps(data)
+    if DEBUG:
+        print "Shell: curl -X {method} -d '{data}' '{url}'".format(method=method, data=data or '', url=url)
+
+    fn = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
+    response = fn(url, data=data)
+    retjson = response.json()
+    if DEBUG:
+        print 'Return:', json.dumps(retjson, indent=4)
+    r = convert(retjson)
+    if r.status != 0 :
+        raise WDAError(r.status, r.value)
+    return r
+
+
+class WDAError(Exception):
+    def __init__(self, status, value):
+        self.status = status
+        self.value = value
+
+    def __str__(self):
+        return 'WDAError(status=%d, value=%s)' % (self.status, self.value)
+
+
+class Rect(object):
+    def __init__(self, x, y, width, height):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+    def __str__(self):
+        return 'Rect(x={x}, y={y}, width={w}, height={h})'.format(
+            x=self.x, y=self.y, w=self.width, h=self.height)
+
+    def __repr__(self):
+        return str(self)
+
+    @property
+    def center(self):
+        return namedtuple('Point', ['x', 'y'])(self.x+self.width/2, self.y+self.height/2)
+
+    @property
+    def origin(self):
+        return namedtuple('Point', ['x', 'y'])(self.x, self.y)
+
+    @property
+    def left(self):
+        return self.x
+
+    @property
+    def top(self):
+        return self.y
+
+    @property
+    def right(self):
+        return self.x+self.width
+
+    @property
+    def bottom(self):
+        return self.y+self.height
+
+
+class Client(object):
+    def __init__(self, target='http://127.0.0.1:8100'):
+        """
+        Args:
+            - target(string): base URL of your iPhone, ex http://10.0.0.1:8100
+        """
+        self._target = target
+
+    def _request(self, base_url, method='GET', data=None):
+        return httpdo(urljoin(self._target, base_url), method, data)
+
+    def status(self):
+        return self._request('status').value
+
+    def home(self):
+        """ Press home button """
+        return self._request('homescreen', 'POST')
+
+    def session(self, bundle_id):
+        """
+        Args:
+            - bundle_id(str): the app bundle id
+
+        WDA Return json like
+
+        {
+            "value": {
+                "sessionId": "69E6FDBA-8D59-4349-B7DE-A9CA41A97814",
+                "capabilities": {
+                    "device": "iphone",
+                    "browserName": "部落冲突",
+                    "sdkVersion": "9.3.2",
+                    "CFBundleIdentifier": "com.supercell.magic"
+                }
+            },
+            "sessionId": "69E6FDBA-8D59-4349-B7DE-A9CA41A97814",
+            "status": 0
+        }
+        """
+        data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
+        res = self._request('session', 'POST', data=data)
+        return Session(self._target, res.sessionId)
+
+    def screenshot(self, png_filename=None):
+        """
+        Screenshot with PNG format
+
+        Args:
+            - png_filename(string): optional, save file name
+
+        Returns:
+            png raw data
+        """
+        value = self._request('screenshot').value
+        raw_value = base64.b64decode(value)
+        if png_filename:
+            with open(png_filename, 'w') as f:
+                f.write(raw_value)
+        return raw_value
+
+    def source(self):
+        # TODO: not tested
+        return self._request('source', 'GET').value
+
+
+class Session(object):
+    def __init__(self, target, session_id):
+        self._target = target.rstrip('/')
+        self._sid = session_id
+
+    def __str__(self):
+        return 'wda.Session (id=%s)' % self._sid
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def _request(self, base_url, method='POST', data=None):
+        url = urljoin(self._target, 'session', self._sid, base_url)
+        return httpdo(url, method, data)
+
+    def tap(self, x, y):
+        return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
+
+    def swipe(self, x1, y1, x2, y2, duration=0.2):
+        """
+        duration(float) not sure the unit, need to test so that you can known
+
+        [[FBRoute POST:@"/uiaTarget/:uuid/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDrag:)],
+        """
+        data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
+        return self._request('/uiaTarget/0/dragfromtoforduration', data=json.dumps(data))
+
+    def dump(self):
+        """ Bad """
+        return self._request('source', 'GET')
+
+    @property
+    def orientation(self):
+        """
+        Return string
+        One of <PORTRAIT | LANDSCAPE>
+        """
+        return self._request('orientation', 'GET').value
+
+    def window_size(self):
+        """
+        Return namedtuple
+
+        For example:
+            Size(width=320, height=568)
+        """
+        value = self._request('/window/0/size', 'GET').value
+        w = roundint(value['width'])
+        h = roundint(value['height'])
+        return namedtuple('Size', ['width', 'height'])(w, h)
+
+    def close(self):
+        return self._request('/', 'DELETE')
+
+    def alert_text(self):
+        return self._request('/alert/text', 'GET').value
+
+    def alert_accept(self):
+        return self._request('/alert/accept', 'POST')
+
+    def alert_dismiss(self):
+        return self._request('/alert/dismiss', 'POST')
+
+    def __call__(self, **kwargs):
+        if kwargs.get('className'):
+            kwargs['class_name'] = kwargs.get('class_name') or kwargs.pop('className')
+        return Selector(urljoin(self._target, '/session', self._sid), **kwargs)
+
 
 class Selector(object):
-    def __init__(self, base_url, text=None, label=None, class_name=None, xpath=None, index=0):
+    def __init__(self, base_url, text=None, class_name=None, xpath=None, index=0):
         self._base_url = base_url
         self._text = unicode(text) if text else None
         self._class_name = unicode(class_name) if class_name else None
@@ -34,13 +253,11 @@ class Selector(object):
         if class_name and not class_name.startswith('XCUIElementType'):
             self._class_name = 'XCUIElementType' + class_name.title()
         if xpath and not xpath.startswith('//XCUIElementType'):
-            element =  '|'.join(xcui_element_types.xcui_element)
+            element = '|'.join(xcui_element_types.xcui_element)
             self._xpath = re.sub(r'/('+element+')', '/XCUIElementType\g<1>', xpath)
 
     def _request(self, data, suburl='elements', method='POST'):
-        func = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
-        res = func(urljoin(self._base_url, suburl), data=data)
-        return res.json()
+        return httpdo(urljoin(self._base_url, suburl), method, data=data)
 
     @property
     def elements(self):
@@ -69,19 +286,8 @@ class Selector(object):
             raise SyntaxError("text or className must be set at least one")
 
         data = json.dumps({'using': using, 'value': value})
-        response = self._request(data)['value']
+        response = self._request(data).value
         elems = []
-        for elem in response:
-            if self._class_name and elem.get('type') != self._class_name:
-                continue
-            #if self._text and elem.get('label') != self._text:
-            #    continue
-            #eid = elem.get('ELEMENT')
-            #if not self._property('displayed', eid=eid): # Since you can't see it, it is better to ignore it.
-            #    continue
-            # maybe need to judge location here.
-            elems.append(elem)
-
         for elem in response:
             if self._class_name and elem.get('type') != self._class_name:
                 continue
@@ -109,14 +315,16 @@ class Selector(object):
     def wait(self, timeout=None):
         """
         Args:
-            - timeout(float): None means infinient
+            - timeout(float): None means 90s
 
         Returns:
             element(json) for example:
             {"label": "Dashboard"," "type": "XCUIElementTypeStaticText"," "ELEMENT": "E60237CB-5FD8-4D60-A6E4-F54B583931DF'}
         """
         start_time = time.time()
-        while timeout is None or start_time+timeout > time.time():
+        if timeout is None or timeout <= 0:
+            timeout = 90.0
+        while start_time+timeout > time.time():
             elems = self.elements
             if len(elems) <= self._index:
                 continue
@@ -128,20 +336,9 @@ class Selector(object):
         eid = element['ELEMENT']
         return self._request("", suburl='element/%s/click' % eid)
 
-    def tap_hold(self, duration=1.0, timeout=None):
-        """
-        Tap and hold for a moment
-
-        Args:
-            - duration(float): seconds of hold time
-
-        [[FBRoute POST:@"/uiaElement/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
-        """
-        element = self.wait(timeout)
-        eid = element['ELEMENT']
-        data = json.dumps({'duration': duration})
-        return self._request(data, suburl='uiaElement/%s/touchAndHold' % eid)
-
+    def click(self, *args, **kwargs):
+        """ Alias of tap """
+        return self.tap(*args, **kwargs)
 
     def tap_hold(self, duration=1.0, timeout=None):
         """
@@ -163,20 +360,55 @@ class Selector(object):
         """
         raise NotImplementedError()
 
-    def scroll(self):
+    def scroll(self, text=None, text_contains=None, direction=None, timeout=None):
         """
-        The comment in WDA source code looks funny
+        Scroll to somewhere, if no args provided, scroll to self visible
 
+        Args:
+            - text (string): element name equals text
+            - text_contains (string): element contains text(donot use it now)
+            - direction (string): one of <up|down|left|right>
+            - timeout (float): timeout to find start element
+
+        Returns:
+            self
+
+        Example:
+            s(text="Hello").scroll() # scroll to visible
+            s(text="Hello").scroll(text="World")
+            s(text="Hello").scroll(text_contains="World")
+            s(text="Hello").scroll(direction="right", timeout=5.0)
+            s(text="Login").scroll().click()
+
+        The comment in WDA source code looks funny
         // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
         // what ios-driver did and sadly, we must copy them.
         """
-        raise NotImplementedError()
+        text_contains = None # will raise Coredump of WDA
+
+        element = self.wait(timeout)
+        eid = element['ELEMENT']
+        if text:
+            data = json.dumps({'name': text})
+        elif text_contains:
+            data = json.dumps({'predicateString': text})
+        elif direction:
+            data = json.dumps({'direction': direction})
+        else:
+            data = json.dumps({'toVisible': True})
+        self._request(data, suburl='uiaElement/{elem_id}/scroll'.format(elem_id=eid))
+        return self
 
     def _property(self, name, data='', method='GET', timeout=None, eid=None):
-        eid = eid or self.wait(timeout)['ELEMENT']
-        return self._request(data, suburl='element/%s/%s' % (eid, name), method=method)['value']
+        if not eid:
+            eid = self.wait(timeout)['ELEMENT']
+        if isinstance(data, dict):
+            data = json.dumps(data)
+        return self._request(data, suburl='element/%s/%s' % (eid, name), method=method).value
 
-    def set_text(self, text):
+    def set_text(self, text, clear=False):
+        if clear:
+            self.clear_text()
         return self._property('value', data=json.dumps({'value': list(text)}), method='POST')
 
     def clear_text(self):
@@ -210,34 +442,26 @@ class Selector(object):
         return self._property('displayed')
 
     @property
-    def rect(self):
+    def bounds(self):
         """
-        Include location and size
-
         Return example:
-        {u'origin': {u'y': 0, u'x': 0}, u'size': {u'width': 85, u'height': 20}}
+            Rect(x=144, y=28, width=88, height=27)
         """
-        return self._property('rect')
+        value = self._property('rect')
+        x, y = value['origin']['x'], value['origin']['y']
+        w, h = value['size']['width'], value['size']['height']
+        return Rect(x, y, w, h)
 
+    # Recommend use bounds method instead
     # @property
     # def location(self):
-    #     """
-    #     Return like
-    #     {"x": 2, "y": 200}
-    #     """
+    #     Return like  #     {"x": 2, "y": 200}
     #     return self._property('location')
 
     # @property
     # def size(self):
-    #     """
-    #     Return like
-    #     {"width": 2, "height": 200}
-    #     """
+    #     Return like {"width": 2, "height": 200}
     #     return self._property('size')
-
-    def click(self, *args, **kwargs):
-        """ Alias of tap """
-        return self.tap(*args, **kwargs)
 
     @property
     def count(self):
@@ -253,139 +477,3 @@ class Selector(object):
 
     def __len__(self):
         return self.count
-
-
-class Session(object):
-    def __init__(self, target, session_id):
-        self._target = target.rstrip('/')
-        self._sid = session_id
-
-    def __str__(self):
-        return 'wda.Session (id=%s)' % self._sid
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
-
-    def _request(self, base_url, method='POST', data=None):
-        func = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
-        url = urljoin(self._target, 'session', self._sid, base_url)
-        # print base_url, url
-        res = func(url, data=data)
-        return res.json()
-
-    def tap(self, x, y):
-        return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
-
-    def swipe(self, x1, y1, x2, y2, duration=0.2):
-        """
-        duration(float) not sure the unit, need to test so that you can known
-
-        [[FBRoute POST:@"/uiaTarget/:uuid/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDrag:)],
-        """
-        data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
-        return self._request('/uiaTarget/0/dragfromtoforduration', data=json.dumps(data))
-
-    def dump(self):
-        """ Bad """
-        return self._request('source', 'GET')
-
-    @property
-    def orientation(self):
-        """
-        Return string
-        One of <PORTRAIT | LANDSCAPE>
-        """
-        return self._request('orientation', 'GET')['value']
-
-    # def set_text(self, text):
-    #     return self._request('/element/0/value', data=json.dumps(dict(value=list(text))))
-
-    def window_size(self):
-        """
-        Return dict:
-        For example:
-
-        {"width": 400, "height": 200}
-        """
-        return self._request('/window/0/size', 'GET')['value']
-
-    def close(self):
-        return self._request('/', 'DELETE')
-
-    def __call__(self, **kwargs):
-        if kwargs.get('className'):
-            kwargs['class_name'] = kwargs.get('class_name') or kwargs.pop('className')
-        return Selector(urljoin(self._target, '/session', self._sid), **kwargs)
-
-
-class Client(object):
-    def __init__(self, target='http://127.0.0.1:8100'):
-        """
-        Args:
-            - target(string): base URL of your iPhone, ex http://10.0.0.1:8100
-        """
-        self._target = target
-
-    def _request(self, base_url, method='GET', data=None):
-        func = dict(GET=requests.get, POST=requests.post)[method]
-        res = func(urljoin(self._target, base_url), data=data)
-        return res.json()
-
-    def status(self):
-        return self._request('status')['value']
-
-    def home(self):
-        """ Press home button """
-        return self._request('homescreen', 'POST')
-
-    def session(self, bundle_id):
-        """
-        Args:
-            - bundle_id(str): the app bundle id
-
-        WDA Return json like
-
-        {
-            "value": {
-                "sessionId": "69E6FDBA-8D59-4349-B7DE-A9CA41A97814",
-                "capabilities": {
-                    "device": "iphone",
-                    "browserName": "部落冲突",
-                    "sdkVersion": "9.3.2",
-                    "CFBundleIdentifier": "com.supercell.magic"
-                }
-            },
-            "sessionId": "69E6FDBA-8D59-4349-B7DE-A9CA41A97814",
-            "status": 0
-        }
-        """
-        data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
-        res = self._request('session', 'POST', data=data)
-        session_id = res.get('sessionId')
-        if session_id is None:
-            raise RuntimeError("WDA session start failed.")
-        return Session(self._target, session_id)
-
-    def screenshot(self, png_filename=None):
-        """
-        Screenshot with PNG format
-
-        Args:
-            - png_filename(string): optional, save file name
-
-        Returns:
-            png raw data
-        """
-        value = self._request('screenshot')['value']
-        raw_value = base64.b64decode(value)
-        if png_filename:
-            with open(png_filename, 'w') as f:
-                f.write(raw_value)
-        return raw_value
-
-    def source(self):
-        # TODO: not tested
-        return self._request('source', 'POST')['value']

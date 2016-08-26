@@ -35,6 +35,13 @@ def test_set_text():
         # s.set_text("Hello world")
         time.sleep(3)
 
+def test_alert():
+    c = wda.Client(__target)
+    with c.session('com.apple.Health') as s:
+        print 'switch to element'
+        time.sleep(3)
+        print s.alert_text()
+        s.alert_accept()
 
 if __name__ == '__main__':
     test_status()
