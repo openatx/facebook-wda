@@ -41,6 +41,12 @@ def test_scroll():
         s(class_name='Table').scroll('Developer')
         s(text='Developer').tap()
         time.sleep(3)
+
+def test_alert():
+    c = wda.Client(__target)
+    with c.session('com.apple.Health') as s:
+        #print s.alert.text
+        pass
         
 
 def test_rect():

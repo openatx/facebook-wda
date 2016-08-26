@@ -122,6 +122,11 @@ s(text="Name").clear_text()
 # Scroll to visible
 s(text="Name").scroll()
 
+# alert
+print s.alert.text
+s.alert.accept()
+s.alert.dismiss()
+
 # s.close() # kill app, no need to call in with
 ```
 
@@ -147,15 +152,7 @@ e.class_name # ex: XCUIElementTypeStaticText
 ```
 
 ## TODO
-Alert operation not implemented, also longTap, drag, pinch(not found in WDA)
-
-Design:
-
-```py
-print s.alert.text()
-s.alert.accept()
-s.alert.dismiss()
-```
+longTap not done pinch(not found in WDA)
 
 TouchID
 
@@ -186,7 +183,7 @@ TouchID
 | 时钟 | com.apple.mobiletimer |
 | 照片 | com.apple.mobileslideshow |
 | 提醒事项 | com.apple.reminders |
-| Desktop | com.apple.springboard (调用这个会导致机器重启) |
+| Desktop | com.apple.springboard (Start this will cause your iPhone reboot) |
 
 **第三方应用**
 

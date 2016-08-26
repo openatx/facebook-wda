@@ -225,6 +225,10 @@ class Session(object):
         h = roundint(value['height'])
         return namedtuple('Size', ['width', 'height'])(w, h)
 
+    @property
+    def alert(self):
+        return Alert(self)
+
     def close(self):
         return self._request('/', 'DELETE')
 
@@ -233,6 +237,22 @@ class Session(object):
             kwargs['class_name'] = kwargs.get('class_name') or kwargs.pop('className')
         return Selector(urljoin(self._target, '/session', self._sid), **kwargs)
 
+
+class Alert(object):
+    def __init__(self, session):
+        self._s = session
+        self._request = session._request
+
+    @property
+    def text(self):
+        return self._request('/alert/text', 'GET').value
+
+    def accept(self):
+        return self._request('/alert/accept', 'POST')
+
+    def dismiss(self):
+        return self._request('/alert/dismiss', 'POST')
+    
 
 class Selector(object):
     def __init__(self, base_url, text=None, class_name=None, xpath=None, index=0):
