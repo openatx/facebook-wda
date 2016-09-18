@@ -173,6 +173,11 @@ class Client(object):
 
 class Session(object):
     def __init__(self, target, session_id):
+        """
+        Args:
+            - target(string): for example, http://127.0.0.1:8100
+            - session_id(string): wda session id
+        """
         self._target = target.rstrip('/')
         self._sid = session_id
 
