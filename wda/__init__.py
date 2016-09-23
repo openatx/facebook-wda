@@ -118,7 +118,10 @@ class Client(object):
         return httpdo(urljoin(self._target, base_url), method, data)
 
     def status(self):
-        return self._request('status').value
+        res = self._request('status')
+        sid = res.sessionId
+        res.value['sessionId'] = sid
+        return res.value
 
     def home(self):
         """ Press home button """
