@@ -467,20 +467,9 @@ class Selector(object):
             Rect(x=144, y=28, width=88, height=27)
         """
         value = self._property('rect')
-        x, y = value['origin']['x'], value['origin']['y']
-        w, h = value['size']['width'], value['size']['height']
+        x, y = value['x'], value['y']
+        w, h = value['width'], value['height']
         return Rect(x, y, w, h)
-
-    # Recommend use bounds method instead
-    # @property
-    # def location(self):
-    #     Return like  #     {"x": 2, "y": 200}
-    #     return self._property('location')
-
-    # @property
-    # def size(self):
-    #     Return like {"width": 2, "height": 200}
-    #     return self._property('size')
 
     @property
     def count(self):
