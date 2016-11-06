@@ -127,7 +127,7 @@ class Client(object):
         """ Press home button """
         return self._request('homescreen', 'POST')
 
-    def session(self, bundle_id):
+    def session(self, bundle_id=None):
         """
         Args:
             - bundle_id(str): the app bundle id
@@ -148,9 +148,15 @@ class Client(object):
             "status": 0
         }
         """
-        data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
-        res = self._request('session', 'POST', data=data)
-        return Session(self._target, res.sessionId)
+        if bundle_id is None:
+            sid = self.status()['sessionId']
+            if not sid:
+                raise RuntimeError("no session created ever")
+            return Session(self._target, sid)
+        else:
+            data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
+            res = self._request('session', 'POST', data=data)
+            return Session(self._target, res.sessionId)
 
     def screenshot(self, png_filename=None):
         """
@@ -232,6 +238,12 @@ class Session(object):
         w = roundint(value['width'])
         h = roundint(value['height'])
         return namedtuple('Size', ['width', 'height'])(w, h)
+
+    def send_keys(self, value):
+        """
+        send keys, yet I know not, todo function
+        """
+        return self._request('/keys', data=json.dumps({'value': value}))
 
     @property
     def alert(self):
