@@ -243,6 +243,8 @@ class Session(object):
         """
         send keys, yet I know not, todo function
         """
+        if isinstance(value, basestring):
+            value = list(value)
         return self._request('/keys', data=json.dumps({'value': value}))
 
     @property
