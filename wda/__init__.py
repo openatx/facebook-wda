@@ -277,13 +277,21 @@ class Alert(object):
     
 
 class Selector(object):
-    def __init__(self, base_url, text=None, class_name=None, xpath=None, index=0, name=None, value=None, label=None):
+    def __init__(self, base_url, name=None, text=None, class_name=None, value=None, label=None, xpath=None, index=0):
+        '''
+        Args:
+            - name(str): attr for name
+            - text(str): alias of name
+            - class_name(str): attr of className
+            - value(str): attr
+            - label(str): attr for label
+            - xpath(str): xpath string, a little slow, but works fine
+            - index(int): useful when found multi elements
+        '''
         self._base_url = base_url
-        self._text = unicode(text) if text else None
-        if name and not self._text:
-            self._text = self._name = unicode(name)
-        else:
-            self._name = self._text
+        if text:
+            name = text
+        self._name = unicode(name) if name else None
         self._value = unicode(value) if value else None
         self._label = unicode(label) if label else None
         self._class_name = unicode(class_name) if class_name else None
@@ -312,9 +320,9 @@ class Selector(object):
         Raises:
             SyntaxError
         """
-        if self._text or self._name:
+        if self._name:
             using = 'link text'
-            value = u'name={name}'.format(name=self._text)
+            value = u'name={name}'.format(name=self._name)
         elif self._value:
             using = 'link text'
             value = u'value={value}'.format(value=self._value)
@@ -335,6 +343,8 @@ class Selector(object):
         elems = []
         for elem in response: 
             if self._class_name and elem.get('type') != self._class_name:
+                continue
+            if self._label and elem.get('label') != self._label:
                 continue
             elems.append(elem)
         return elems
