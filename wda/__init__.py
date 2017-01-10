@@ -454,6 +454,15 @@ class Selector(object):
         self._request(data, suburl='uiaElement/{elem_id}/scroll'.format(elem_id=eid))
         return self
 
+    def swipe(self, direction, timeout=None):
+        if direction not in ['up', 'down', 'left', 'right']:
+            raise ValueError
+        else:
+            element = self.wait(timeout)
+            eid = element['ELEMENT']
+            data = json.dumps({'direction': direction})
+            return self._request(data, suburl='wda/%s/swipe' % eid)
+
     def _property(self, name, data='', method='GET', timeout=None, eid=None):
         if not eid:
             eid = self.wait(timeout)['ELEMENT']
