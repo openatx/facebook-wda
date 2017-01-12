@@ -98,7 +98,7 @@ print s.window_size()
 # Simulate touch
 s.tap(200, 200)
 
-# Simulate swipe
+# Simulate swipe, utilizing drag api
 s.swipe(x1, y1, x2, y2, 0.5) # 0.5s
 
 # Find elements
@@ -121,6 +121,9 @@ s(text="Name").clear_text()
 
 # Scroll to visible
 s(text="Name").scroll()
+
+# Swipe
+s(className="Image").swipe("left")
 
 # alert
 print s.alert.text
