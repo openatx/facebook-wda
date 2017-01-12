@@ -208,7 +208,7 @@ class Session(object):
 
     def swipe(self, x1, y1, x2, y2, duration=0.2):
         """
-        duration(float) not sure the unit, need to test so that you can known
+        duration(float), in the unit of second(NSTimeInterval)
 
         [[FBRoute POST:@"/uiaTarget/:uuid/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDrag:)],
         """
@@ -457,11 +457,10 @@ class Selector(object):
     def swipe(self, direction, timeout=None):
         if direction not in ['up', 'down', 'left', 'right']:
             raise ValueError
-        else:
-            element = self.wait(timeout)
-            eid = element['ELEMENT']
-            data = json.dumps({'direction': direction})
-            return self._request(data, suburl='wda/%s/swipe' % eid)
+        element = self.wait(timeout)
+        eid = element['ELEMENT']
+        data = json.dumps({'direction': direction})
+        return self._request(data, suburl='wda/%s/swipe' % eid)
 
     def _property(self, name, data='', method='GET', timeout=None, eid=None):
         if not eid:
