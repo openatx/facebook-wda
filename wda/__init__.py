@@ -298,7 +298,7 @@ class Selector(object):
         self._xpath = unicode(xpath) if xpath else None
         self._index = index
         if class_name and not class_name.startswith('XCUIElementType'):
-            self._class_name = 'XCUIElementType' + class_name.title()
+            self._class_name = 'XCUIElementType' + class_name.encode('utf-8')
         if xpath and not xpath.startswith('//XCUIElementType'):
             element = '|'.join(xcui_element_types.xcui_element)
             self._xpath = re.sub(r'/('+element+')', '/XCUIElementType\g<1>', xpath)
