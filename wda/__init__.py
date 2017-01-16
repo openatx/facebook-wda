@@ -48,7 +48,14 @@ def httpdo(url, method='GET', data=None):
         print "Shell: curl -X {method} -d '{data}' '{url}'".format(method=method, data=data or '', url=url)
 
     fn = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
-    response = fn(url, data=data)
+    try:
+        response = fn(url, data=data, timeout=10)
+    except Exception, e:# requests.exceptions.ConnectionError:
+        # retry again
+        print 'retry to connect, error:', str(e)
+        time.sleep(1.0)
+        response = fn(url, data=data, timeout=10)
+
     retjson = response.json()
     if DEBUG:
         print 'Return:', json.dumps(retjson, indent=4)
