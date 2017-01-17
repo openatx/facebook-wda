@@ -1,17 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+from __future__ import unicode_literals
+
 
 import json
-import urlparse
 import base64
 import copy
 import time
 import re
 from collections import namedtuple
 
+import six
 import requests
-import xcui_element_types
+from . import xcui_element_types
+
+if six.PY3:
+    from urllib.parse import urljoin as _urljoin
+    from functools import reduce
+else:
+    from urlparse import urljoin as _urljoin
 
 DEBUG = False
 
@@ -20,7 +29,7 @@ def convert(dictionary):
     """
     Convert dict to namedtuple
     """
-    return namedtuple('GenericDict', dictionary.keys())(**dictionary)
+    return namedtuple('GenericDict', list(dictionary.keys()))(**dictionary)
 
 
 def urljoin(*urls):
@@ -32,7 +41,7 @@ def urljoin(*urls):
 
     This function fix that.
     """
-    return reduce(urlparse.urljoin, [u.strip('/')+'/' for u in urls if u.strip('/')], '').rstrip('/')
+    return reduce(_urljoin, [u.strip('/')+'/' for u in urls if u.strip('/')], '').rstrip('/')
 
 def roundint(i):
     return int(round(i, 0))
@@ -45,20 +54,20 @@ def httpdo(url, method='GET', data=None):
     if isinstance(data, dict):
         data = json.dumps(data)
     if DEBUG:
-        print "Shell: curl -X {method} -d '{data}' '{url}'".format(method=method, data=data or '', url=url)
+        print("Shell: curl -X {method} -d '{data}' '{url}'".format(method=method, data=data or '', url=url))
 
     fn = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
     try:
-        response = fn(url, data=data, timeout=10)
-    except Exception, e:# requests.exceptions.ConnectionError:
+        response = fn(url, data=data, timeout=20)
+    except requests.exceptions.ConnectionError:
         # retry again
-        print 'retry to connect, error:', str(e)
+        print('retry to connect, error: {}'.format(e))
         time.sleep(1.0)
         response = fn(url, data=data, timeout=10)
 
     retjson = response.json()
     if DEBUG:
-        print 'Return:', json.dumps(retjson, indent=4)
+        print('Return: {}'.format(json.dumps(retjson, indent=4)))
     r = convert(retjson)
     if r.status != 0:
         raise WDAError(r.status, r.value)
@@ -250,7 +259,7 @@ class Session(object):
         """
         send keys, yet I know not, todo function
         """
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             value = list(value)
         return self._request('/keys', data=json.dumps({'value': value}))
 
@@ -298,11 +307,11 @@ class Selector(object):
         self._base_url = base_url
         if text:
             name = text
-        self._name = unicode(name) if name else None
-        self._value = unicode(value) if value else None
-        self._label = unicode(label) if label else None
-        self._class_name = unicode(class_name) if class_name else None
-        self._xpath = unicode(xpath) if xpath else None
+        self._name = six.u(name) if name else None
+        self._value = six.u(value) if value else None
+        self._label = six.u(label) if label else None
+        self._class_name = six.u(class_name) if class_name else None
+        self._xpath = six.u(xpath) if xpath else None
         self._index = index
         if class_name and not class_name.startswith('XCUIElementType'):
             self._class_name = 'XCUIElementType' + class_name
@@ -329,13 +338,13 @@ class Selector(object):
         """
         if self._name:
             using = 'link text'
-            value = u'name={name}'.format(name=self._name)
+            value = 'name={name}'.format(name=self._name)
         elif self._value:
             using = 'link text'
-            value = u'value={value}'.format(value=self._value)
+            value = 'value={value}'.format(value=self._value)
         elif self._label:
             using = 'link text'
-            value = u'label={label}'.format(label=self._label)
+            value = 'label={label}'.format(label=self._label)
         elif self._class_name:
             using = 'class name'
             value = self._class_name
