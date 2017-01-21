@@ -59,7 +59,7 @@ def httpdo(url, method='GET', data=None):
     fn = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
     try:
         response = fn(url, data=data, timeout=20)
-    except requests.exceptions.ConnectionError:
+    except requests.exceptions.ConnectionError as e:
         # retry again
         print('retry to connect, error: {}'.format(e))
         time.sleep(1.0)
