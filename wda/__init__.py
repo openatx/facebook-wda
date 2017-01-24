@@ -307,12 +307,12 @@ class Selector(object):
         self._base_url = base_url
         if text:
             name = text
-        self._name = six.u(name) if name else None
-        self._value = six.u(value) if value else None
-        self._label = six.u(label) if label else None
-        self._class_name = six.u(class_name) if class_name else None
-        self._xpath = six.u(xpath) if xpath else None
         self._index = index
+        self._name = six.text_type(name) if name else None
+        self._value = six.text_type(value) if value else None
+        self._label = six.text_type(label) if label else None
+        self._xpath = six.text_type(xpath) if xpath else None
+        self._class_name = six.text_type(class_name) if class_name else None
         if class_name and not class_name.startswith('XCUIElementType'):
             self._class_name = 'XCUIElementType' + class_name
         if xpath and not xpath.startswith('//XCUIElementType'):
