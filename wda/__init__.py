@@ -476,7 +476,7 @@ class Selector(object):
         element = self.wait(timeout)
         eid = element['ELEMENT']
         data = json.dumps({'direction': direction})
-        return self._request(data, suburl='wda/%s/swipe' % eid)
+        return self._request(data, suburl='wda/element/%s/swipe' % eid)
 
     def _property(self, name, data='', method='GET', timeout=None, eid=None):
         if not eid:
