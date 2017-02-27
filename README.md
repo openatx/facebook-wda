@@ -59,6 +59,9 @@ print c.status()
 
 # Press home button
 c.home()
+
+# Hit healthcheck
+c.healthcheck()
 ```
 
 Take screenshot

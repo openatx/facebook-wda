@@ -140,8 +140,12 @@ class Client(object):
         return res.value
 
     def home(self):
-        """ Press home button """
+        """Press home button"""
         return self._request('homescreen', 'POST')
+
+    def healthcheck(self):
+        """Hit healthcheck"""
+        return self._request('/wda/healthcheck', 'GET')
 
     def session(self, bundle_id=None):
         """
