@@ -249,12 +249,13 @@ class Session(object):
 
     def swipe(self, x1, y1, x2, y2, duration=0.2):
         """
-        duration(float), in the unit of second(NSTimeInterval)
+        Args:
+            - duration(float): in the unit of second(NSTimeInterval)
 
-        [[FBRoute POST:@"/uiaTarget/:uuid/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDrag:)],
+        [[FBRoute POST:@"/wda/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDragCoordinate:)],
         """
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
-        return self._request('/uiaTarget/0/dragfromtoforduration', data=json.dumps(data))
+        return self._request('/wda/dragfromtoforduration', data=json.dumps(data))
 
     def dump(self):
         """ Bad """
@@ -503,6 +504,13 @@ class Selector(object):
         data = json.dumps({'direction': direction})
         return self._request(data, suburl='wda/element/%s/swipe' % eid)
 
+    # todo
+    # pinch
+    # touchAndHold
+    # dragfromtoforduration
+    # twoFingerTap
+
+
     def _property(self, name, data='', method='GET', timeout=None, eid=None):
         if not eid:
             eid = self.wait(timeout)['ELEMENT']
@@ -539,6 +547,10 @@ class Selector(object):
     def accessible(self):
         """ true or false """
         return self._property('accessible')
+
+    # todo
+    # handleGetIsAccessibilityContainer
+    # [[FBRoute GET:@"/wda/element/:uuid/accessibilityContainer"] respondWithTarget:self action:@selector(handleGetIsAccessibilityContainer:)],
 
     @property
     def displayed(self):
