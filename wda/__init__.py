@@ -141,11 +141,20 @@ class Client(object):
 
     def home(self):
         """Press home button"""
-        return self._request('homescreen', 'POST')
+        return self._request('/wda/homescreen', 'POST')
 
     def healthcheck(self):
         """Hit healthcheck"""
         return self._request('/wda/healthcheck', 'GET')
+
+    def source(self, accessible=False):
+        if accessible:
+            return self._request('/wda/accessibleSource', 'GET').value
+        return self._request('source', 'GET').value
+
+    # Todo
+    # /wda/deactivateApp
+    # /wda/keyboard/dismiss
 
     def session(self, bundle_id=None):
         """
@@ -194,10 +203,6 @@ class Client(object):
             with open(png_filename, 'w') as f:
                 f.write(raw_value)
         return raw_value
-
-    def source(self):
-        # TODO: not tested
-        return self._request('source', 'GET').value
 
 
 class Session(object):
@@ -281,7 +286,7 @@ class Session(object):
         """
         if isinstance(value, six.string_types):
             value = list(value)
-        return self._request('/keys', data=json.dumps({'value': value}))
+        return self._request('/wda/keys', data=json.dumps({'value': value}))
 
     @property
     def alert(self):
