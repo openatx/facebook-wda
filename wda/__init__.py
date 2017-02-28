@@ -234,7 +234,7 @@ class Session(object):
     def double_tap(self, x, y):
         return self._request('/wda/doubleTap', data=json.dumps(dict(x=x, y=y)))
 
-    def tap_hold(self, x, y, duration=1.0, timeout=None):
+    def tap_hold(self, x, y, duration=1.0):
         """
         Tap and hold for a moment
 
