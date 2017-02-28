@@ -226,6 +226,22 @@ class Session(object):
     def tap(self, x, y):
         return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
 
+    def double_tap(self, x, y):
+        return self._request('/wda/doubleTap', data=json.dumps(dict(x=x, y=y)))
+
+    def tap_hold(self, x, y, duration=1.0, timeout=None):
+        """
+        Tap and hold for a moment
+
+        Args:
+            - x, y(int): position
+            - duration(float): seconds of hold time
+
+        [[FBRoute POST:@"/wda/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHoldCoordinate:)],
+        """
+        data = json.dumps({'x': x, 'y': y, 'duration': duration})
+        return self._request('/wda/touchAndHold', data=data)
+
     def swipe(self, x1, y1, x2, y2, duration=0.2):
         """
         duration(float), in the unit of second(NSTimeInterval)
@@ -254,7 +270,7 @@ class Session(object):
         For example:
             Size(width=320, height=568)
         """
-        value = self._request('/window/0/size', 'GET').value
+        value = self._request('/window/size', 'GET').value
         w = roundint(value['width'])
         h = roundint(value['height'])
         return namedtuple('Size', ['width', 'height'])(w, h)
@@ -422,16 +438,16 @@ class Selector(object):
         Args:
             - duration(float): seconds of hold time
 
-        [[FBRoute POST:@"/uiaElement/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
+        [[FBRoute POST:@"/wda/element/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
         """
         element = self.wait(timeout)
         eid = element['ELEMENT']
         data = json.dumps({'duration': duration})
-        return self._request(data, suburl='uiaElement/%s/touchAndHold' % eid)
+        return self._request(data, suburl='wda/element/%s/touchAndHold' % eid)
 
     def double_tap(self, x, y):
         """
-        [[FBRoute POST:@"/uiaElement/:uuid/doubleTap"] respondWithTarget:self action:@selector(handleDoubleTap:)],
+        [[FBRoute POST:@"/wda/element/:uuid/doubleTap"] respondWithTarget:self action:@selector(handleDoubleTap:)],
         """
         raise NotImplementedError()
 
@@ -471,7 +487,7 @@ class Selector(object):
             data = json.dumps({'direction': direction})
         else:
             data = json.dumps({'toVisible': True})
-        self._request(data, suburl='uiaElement/{elem_id}/scroll'.format(elem_id=eid))
+        self._request(data, suburl='wda/element/{elem_id}/scroll'.format(elem_id=eid))
         return self
 
     def swipe(self, direction, timeout=None):
