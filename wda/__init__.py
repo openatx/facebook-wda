@@ -229,7 +229,7 @@ class Session(object):
         return httpdo(url, method, data)
 
     def tap(self, x, y):
-        return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
+        return self._request('/wda/tap/0', data=json.dumps(dict(x=x, y=y)))
 
     def double_tap(self, x, y):
         return self._request('/wda/doubleTap', data=json.dumps(dict(x=x, y=y)))
