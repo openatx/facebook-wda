@@ -1,17 +1,44 @@
+Skip to content
+This repository
+Search
+Pull requests
+Issues
+Gist
+ @wwjackli
+ Sign out
+ Unwatch 6
+  Unstar 48
+  Fork 27 openatx/facebook-wda
+ Code  Issues 1  Pull requests 1  Projects 0  Wiki  Pulse  Graphs
+Tree: a6a6860bbc Find file Copy pathfacebook-wda/wda/__init__.py
+a6a6860  18 hours ago
+@codeskyblue codeskyblue update api sync with WDA
+5 contributors @codeskyblue @diaojunxian @riccoyu @wwjackli @iquicktest
+RawBlameHistory    
+568 lines (462 sloc)  16.9 KB
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+from __future__ import unicode_literals
+
 
 import json
-import urlparse
 import base64
 import copy
 import time
 import re
 from collections import namedtuple
 
+import six
 import requests
-import xcui_element_types
+from . import xcui_element_types
+
+if six.PY3:
+    from urllib.parse import urljoin as _urljoin
+    from functools import reduce
+else:
+    from urlparse import urljoin as _urljoin
 
 DEBUG = False
 
@@ -20,7 +47,7 @@ def convert(dictionary):
     """
     Convert dict to namedtuple
     """
-    return namedtuple('GenericDict', dictionary.keys())(**dictionary)
+    return namedtuple('GenericDict', list(dictionary.keys()))(**dictionary)
 
 
 def urljoin(*urls):
@@ -29,10 +56,9 @@ def urljoin(*urls):
     Standard urlparse.urljoin('http://a.com/foo', '/bar')
     Expect: http://a.com/foo/bar
     Actually: http://a.com/bar
-
     This function fix that.
     """
-    return reduce(urlparse.urljoin, [u.strip('/')+'/' for u in urls if u.strip('/')], '').rstrip('/')
+    return reduce(_urljoin, [u.strip('/')+'/' for u in urls if u.strip('/')], '').rstrip('/')
 
 def roundint(i):
     return int(round(i, 0))
@@ -45,13 +71,20 @@ def httpdo(url, method='GET', data=None):
     if isinstance(data, dict):
         data = json.dumps(data)
     if DEBUG:
-        print "Shell: curl -X {method} -d '{data}' '{url}'".format(method=method, data=data or '', url=url)
+        print("Shell: curl -X {method} -d '{data}' '{url}'".format(method=method, data=data or '', url=url))
 
     fn = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
-    response = fn(url, data=data)
+    try:
+        response = fn(url, data=data, timeout=20)
+    except requests.exceptions.ConnectionError as e:
+        # retry again
+        print('retry to connect, error: {}'.format(e))
+        time.sleep(1.0)
+        response = fn(url, data=data, timeout=10)
+
     retjson = response.json()
     if DEBUG:
-        print 'Return:', json.dumps(retjson, indent=4)
+        print('Return: {}'.format(json.dumps(retjson, indent=4)))
     r = convert(retjson)
     if r.status != 0:
         raise WDAError(r.status, r.value)
@@ -124,16 +157,18 @@ class Client(object):
         return res.value
 
     def home(self):
-        """ Press home button """
+        """Press home button"""
         return self._request('homescreen', 'POST')
+
+    def healthcheck(self):
+        """Hit healthcheck"""
+        return self._request('/wda/healthcheck', 'GET')
 
     def session(self, bundle_id=None):
         """
         Args:
             - bundle_id(str): the app bundle id
-
         WDA Return json like
-
         {
             "value": {
                 "sessionId": "69E6FDBA-8D59-4349-B7DE-A9CA41A97814",
@@ -161,10 +196,8 @@ class Client(object):
     def screenshot(self, png_filename=None):
         """
         Screenshot with PNG format
-
         Args:
             - png_filename(string): optional, save file name
-
         Returns:
             png raw data
         """
@@ -204,16 +237,29 @@ class Session(object):
         return httpdo(url, method, data)
 
     def tap(self, x, y):
-        return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
+        return self._request('/wda/tap/0', data=json.dumps(dict(x=x, y=y)))
+
+    def double_tap(self, x, y):
+        return self._request('/wda/doubleTap', data=json.dumps(dict(x=x, y=y)))
+
+    def tap_hold(self, x, y, duration=1.0, timeout=None):
+        """
+        Tap and hold for a moment
+        Args:
+            - x, y(int): position
+            - duration(float): seconds of hold time
+        [[FBRoute POST:@"/wda/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHoldCoordinate:)],
+        """
+        data = json.dumps({'x': x, 'y': y, 'duration': duration})
+        return self._request('/wda/touchAndHold', data=data)
 
     def swipe(self, x1, y1, x2, y2, duration=0.2):
         """
         duration(float), in the unit of second(NSTimeInterval)
-
         [[FBRoute POST:@"/uiaTarget/:uuid/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDrag:)],
         """
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
-        return self._request('/uiaTarget/0/dragfromtoforduration', data=json.dumps(data))
+        return self._request('/wda/dragfromtoforduration', data=json.dumps(data))
 
     def dump(self):
         """ Bad """
@@ -230,11 +276,10 @@ class Session(object):
     def window_size(self):
         """
         Return namedtuple
-
         For example:
             Size(width=320, height=568)
         """
-        value = self._request('/window/0/size', 'GET').value
+        value = self._request('/window/size', 'GET').value
         w = roundint(value['width'])
         h = roundint(value['height'])
         return namedtuple('Size', ['width', 'height'])(w, h)
@@ -243,7 +288,7 @@ class Session(object):
         """
         send keys, yet I know not, todo function
         """
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             value = list(value)
         return self._request('/keys', data=json.dumps({'value': value}))
 
@@ -291,12 +336,12 @@ class Selector(object):
         self._base_url = base_url
         if text:
             name = text
-        self._name = unicode(name) if name else None
-        self._value = unicode(value) if value else None
-        self._label = unicode(label) if label else None
-        self._class_name = unicode(class_name) if class_name else None
-        self._xpath = unicode(xpath) if xpath else None
         self._index = index
+        self._name = six.text_type(name) if name else None
+        self._value = six.text_type(value) if value else None
+        self._label = six.text_type(label) if label else None
+        self._xpath = six.text_type(xpath) if xpath else None
+        self._class_name = six.text_type(class_name) if class_name else None
         if class_name and not class_name.startswith('XCUIElementType'):
             self._class_name = 'XCUIElementType' + class_name
         if xpath and not xpath.startswith('//XCUIElementType'):
@@ -316,19 +361,18 @@ class Selector(object):
             {u'label': None, u'type': u'XCUIElementTypeNavigationBar', u'ELEMENT': u'786F9BB6-7734-4B52-B341-09030256C3A6'},
             {u'label': u'Dashboard', u'type': u'XCUIElementTypeButton', u'ELEMENT': u'504C94B5-742D-4757-B954-096EE3512018'}
         ]
-
         Raises:
             SyntaxError
         """
         if self._name:
             using = 'link text'
-            value = u'name={name}'.format(name=self._name)
+            value = 'name={name}'.format(name=self._name)
         elif self._value:
             using = 'link text'
-            value = u'value={value}'.format(value=self._value)
+            value = 'value={value}'.format(value=self._value)
         elif self._label:
             using = 'link text'
-            value = u'label={label}'.format(label=self._label)
+            value = 'label={label}'.format(label=self._label)
         elif self._class_name:
             using = 'class name'
             value = self._class_name
@@ -371,7 +415,6 @@ class Selector(object):
         """
         Args:
             - timeout(float): None means 90s
-
         Returns:
             element(json) for example:
             {"label": "Dashboard"," "type": "XCUIElementTypeStaticText"," "ELEMENT": "E60237CB-5FD8-4D60-A6E4-F54B583931DF'}
@@ -398,43 +441,37 @@ class Selector(object):
     def tap_hold(self, duration=1.0, timeout=None):
         """
         Tap and hold for a moment
-
         Args:
             - duration(float): seconds of hold time
-
-        [[FBRoute POST:@"/uiaElement/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
+        [[FBRoute POST:@"/wda/element/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
         """
         element = self.wait(timeout)
         eid = element['ELEMENT']
         data = json.dumps({'duration': duration})
-        return self._request(data, suburl='uiaElement/%s/touchAndHold' % eid)
+        return self._request(data, suburl='wda/element/%s/touchAndHold' % eid)
 
     def double_tap(self, x, y):
         """
-        [[FBRoute POST:@"/uiaElement/:uuid/doubleTap"] respondWithTarget:self action:@selector(handleDoubleTap:)],
+        [[FBRoute POST:@"/wda/element/:uuid/doubleTap"] respondWithTarget:self action:@selector(handleDoubleTap:)],
         """
         raise NotImplementedError()
 
     def scroll(self, text=None, text_contains=None, direction=None, timeout=None):
         """
         Scroll to somewhere, if no args provided, scroll to self visible
-
         Args:
             - text (string): element name equals text
             - text_contains (string): element contains text(donot use it now)
             - direction (string): one of <up|down|left|right>
             - timeout (float): timeout to find start element
-
         Returns:
             self
-
         Example:
             s(text="Hello").scroll() # scroll to visible
             s(text="Hello").scroll(text="World")
             s(text="Hello").scroll(text_contains="World")
             s(text="Hello").scroll(direction="right", timeout=5.0)
             s(text="Login").scroll().click()
-
         The comment in WDA source code looks funny
         // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
         // what ios-driver did and sadly, we must copy them.
@@ -451,7 +488,7 @@ class Selector(object):
             data = json.dumps({'direction': direction})
         else:
             data = json.dumps({'toVisible': True})
-        self._request(data, suburl='uiaElement/{elem_id}/scroll'.format(elem_id=eid))
+        self._request(data, suburl='wda/element/{elem_id}/scroll'.format(elem_id=eid))
         return self
 
     def swipe(self, direction, timeout=None):
@@ -460,7 +497,7 @@ class Selector(object):
         element = self.wait(timeout)
         eid = element['ELEMENT']
         data = json.dumps({'direction': direction})
-        return self._request(data, suburl='wda/%s/swipe' % eid)
+        return self._request(data, suburl='wda/element/%s/swipe' % eid)
 
     def _property(self, name, data='', method='GET', timeout=None, eid=None):
         if not eid:
