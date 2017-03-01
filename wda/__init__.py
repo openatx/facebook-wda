@@ -493,8 +493,8 @@ class Selector(object):
     def pinch(self, scale, velocity, timeout=None):
         """
         Args:
-            - scale(float): 
-            - velocity(float): speed
+            - scale(float): scale must be greater than zero
+            - velocity(float): velocity must be less than zero when scale is less than 1
         """
         element = self.wait(timeout)
         eid = element['ELEMENT']

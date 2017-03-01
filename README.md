@@ -152,6 +152,10 @@ s.keyboard.dismiss()
 # Swipe
 s(className="Image").swipe("left")
 
+# Pinch
+s(class_name="Map").pinch(2, 1) # scale=2, speed=1
+s(class_name="Map").pinch(0.1, -1) # scale=0.1, speed=-1 (I donot very understand too)
+
 # alert
 print s.alert.exists
 print s.alert.text
