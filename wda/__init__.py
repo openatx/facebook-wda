@@ -23,7 +23,7 @@ else:
     from urlparse import urljoin as _urljoin
 
 DEBUG = False
-HTTP_TIMEOUT = 20.0 # unit second
+HTTP_TIMEOUT = 60.0 # unit second
 
 
 def convert(dictionary):
