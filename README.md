@@ -42,7 +42,7 @@ The usage is very simple `iproxy <local port> <remote port> [udid]`
 import wda
 
 wda.DEBUG = False # default False
-wda.HTTP_TIMEOUT = 20.0 # default 20.0 seconds
+wda.HTTP_TIMEOUT = 60.0 # default 60.0 seconds
 ```
 
 ## How to use
@@ -76,7 +76,7 @@ c.source() # format XML
 c.source(accessible=True) # default false, format JSON
 ```
 
-Take screenshot
+Take screenshot, only can save format png
 
 ```py
 c.screenshot('screen.png')
