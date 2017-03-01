@@ -23,6 +23,7 @@ else:
     from urlparse import urljoin as _urljoin
 
 DEBUG = False
+HTTP_TIMEOUT = 20.0 # unit second
 
 
 def convert(dictionary):
@@ -58,7 +59,7 @@ def httpdo(url, method='GET', data=None):
 
     fn = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
     try:
-        response = fn(url, data=data, timeout=20)
+        response = fn(url, data=data, timeout=HTTP_TIMEOUT)
     except requests.exceptions.ConnectionError as e:
         # retry again
         print('retry to connect, error: {}'.format(e))

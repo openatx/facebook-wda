@@ -37,6 +37,14 @@ I found a tools named `iproxy` which can forward device port to localhost, it\'s
 
 The usage is very simple `iproxy <local port> <remote port> [udid]`
 
+## Configuration
+```python
+import wda
+
+wda.DEBUG = False # default False
+wda.HTTP_TIMEOUT = 20.0 # default 20.0 seconds
+```
+
 ## How to use
 Create a client
 
