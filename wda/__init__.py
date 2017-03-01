@@ -229,6 +229,13 @@ class Session(object):
         url = urljoin(self._target, 'session', self._sid, base_url)
         return httpdo(url, method, data)
 
+    def deactivate(self, duration):
+        """Put app into background and than put it back
+        Args:
+            - duration(float): deactivate time, seconds
+        """
+        return self._request('/wda/deactivateApp', data=json.dumps(dict(duration=duration)))
+
     def tap(self, x, y):
         return self._request('/wda/tap/0', data=json.dumps(dict(x=x, y=y)))
 
@@ -294,6 +301,10 @@ class Session(object):
     def alert(self):
         return Alert(self)
 
+    @property
+    def keyboard(self):
+        return Keyboard(self)
+
     def close(self):
         return self._request('/', 'DELETE')
 
@@ -309,6 +320,16 @@ class Alert(object):
         self._request = session._request
 
     @property
+    def exists(self):
+        try:
+            self.text
+        except WDAError as e:
+            if e.status != 27:
+                raise
+            return False
+        return True
+        
+    @property
     def text(self):
         return self._request('/alert/text', 'GET').value
 
@@ -318,6 +339,15 @@ class Alert(object):
     def dismiss(self):
         return self._request('/alert/dismiss', 'POST')
     
+
+class Keyboard(object):
+    def __init__(self, session):
+        self._s = session
+        self._request = session._request
+
+    def dismiss(self):
+        return self._request('/wda/keyboard/dismiss', 'POST')
+
 
 class Selector(object):
     def __init__(self, base_url, name=None, text=None, class_name=None, value=None, label=None, xpath=None, index=0):
@@ -452,11 +482,24 @@ class Selector(object):
         data = json.dumps({'duration': duration})
         return self._request(data, suburl='wda/element/%s/touchAndHold' % eid)
 
-    def double_tap(self, x, y):
+    def double_tap(self, timeout=None):
         """
         [[FBRoute POST:@"/wda/element/:uuid/doubleTap"] respondWithTarget:self action:@selector(handleDoubleTap:)],
         """
-        raise NotImplementedError()
+        element = self.wait(timeout)
+        eid = element['ELEMENT']
+        return self._request("", suburl='wda/element/%s/doubleTap' % eid)
+
+    def pinch(self, scale, velocity, timeout=None):
+        """
+        Args:
+            - scale(float): 
+            - velocity(float): speed
+        """
+        element = self.wait(timeout)
+        eid = element['ELEMENT']
+        data = json.dumps({'scale': scale, 'velocity': velocity})
+        return self._request(data, suburl='wda/element/%s/pinch' % eid)
 
     def scroll(self, text=None, text_contains=None, direction=None, timeout=None):
         """
@@ -519,6 +562,13 @@ class Selector(object):
             data = json.dumps(data)
         return self._request(data, suburl='element/%s/%s' % (eid, name), method=method).value
 
+    def _wda_property(self, name, data='', method='GET', timeout=None, eid=None):
+        if not eid:
+            eid = self.wait(timeout)['ELEMENT']
+        if isinstance(data, dict):
+            data = json.dumps(data)
+        return self._request(data, suburl='wda/element/%s/%s' % (eid, name), method=method).value
+
     def set_text(self, text, clear=False):
         if clear:
             self.clear_text()
@@ -547,7 +597,7 @@ class Selector(object):
     @property
     def accessible(self):
         """ true or false """
-        return self._property('accessible')
+        return self._wda_property('accessible')
 
     # todo
     # handleGetIsAccessibilityContainer

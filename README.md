@@ -72,8 +72,8 @@ c.home()
 c.healthcheck()
 
 # Get page source
-c.source()
-c.source(accessible=True) # default false
+c.source() # format XML
+c.source(accessible=True) # default false, format JSON
 ```
 
 Take screenshot
@@ -104,6 +104,9 @@ Session operations
 ```py
 # One of <PORTRAIT | LANDSCAPE>
 print s.orientation # expect PORTRAIT
+
+# Deactivate App for some time
+s.deactivate(5.0) # 5s
 
 # Get width and height
 print s.window_size()
@@ -143,10 +146,14 @@ s(text="Name").clear_text()
 # Scroll to visible
 s(text="Name").scroll()
 
+# Hide keyboard (not working in simulator)
+s.keyboard.dismiss()
+
 # Swipe
 s(className="Image").swipe("left")
 
 # alert
+print s.alert.exists
 print s.alert.text
 s.alert.accept()
 s.alert.dismiss()
