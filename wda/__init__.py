@@ -1,21 +1,3 @@
-Skip to content
-This repository
-Search
-Pull requests
-Issues
-Gist
- @wwjackli
- Sign out
- Unwatch 6
-  Unstar 48
-  Fork 27 openatx/facebook-wda
- Code  Issues 1  Pull requests 1  Projects 0  Wiki  Pulse  Graphs
-Tree: a6a6860bbc Find file Copy pathfacebook-wda/wda/__init__.py
-a6a6860  18 hours ago
-@codeskyblue codeskyblue update api sync with WDA
-5 contributors @codeskyblue @diaojunxian @riccoyu @wwjackli @iquicktest
-RawBlameHistory    
-568 lines (462 sloc)  16.9 KB
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -256,7 +238,7 @@ class Session(object):
     def swipe(self, x1, y1, x2, y2, duration=0.2):
         """
         duration(float), in the unit of second(NSTimeInterval)
-        [[FBRoute POST:@"/uiaTarget/:uuid/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDrag:)],
+        [[FBRoute POST:@"/wda/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDragCoordinate:)],
         """
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
         return self._request('/wda/dragfromtoforduration', data=json.dumps(data))
