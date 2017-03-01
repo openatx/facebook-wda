@@ -37,6 +37,14 @@ I found a tools named `iproxy` which can forward device port to localhost, it\'s
 
 The usage is very simple `iproxy <local port> <remote port> [udid]`
 
+## Configuration
+```python
+import wda
+
+wda.DEBUG = False # default False
+wda.HTTP_TIMEOUT = 20.0 # default 20.0 seconds
+```
+
 ## How to use
 Create a client
 
@@ -62,6 +70,10 @@ c.home()
 
 # Hit healthcheck
 c.healthcheck()
+
+# Get page source
+c.source()
+c.source(accessible=True) # default false
 ```
 
 Take screenshot
@@ -101,8 +113,14 @@ print s.window_size()
 # Simulate touch
 s.tap(200, 200)
 
+# Double touch
+s.double_tap(200, 200)
+
 # Simulate swipe, utilizing drag api
 s.swipe(x1, y1, x2, y2, 0.5) # 0.5s
+
+# tap hold
+s.tap_hold(x, y, 1.0)
 
 # Find elements
 print s(text="Dashboard").exists

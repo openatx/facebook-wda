@@ -23,6 +23,7 @@ else:
     from urlparse import urljoin as _urljoin
 
 DEBUG = False
+HTTP_TIMEOUT = 20.0 # unit second
 
 
 def convert(dictionary):
@@ -58,7 +59,7 @@ def httpdo(url, method='GET', data=None):
 
     fn = dict(GET=requests.get, POST=requests.post, DELETE=requests.delete)[method]
     try:
-        response = fn(url, data=data, timeout=20)
+        response = fn(url, data=data, timeout=HTTP_TIMEOUT)
     except requests.exceptions.ConnectionError as e:
         # retry again
         print('retry to connect, error: {}'.format(e))
@@ -141,11 +142,20 @@ class Client(object):
 
     def home(self):
         """Press home button"""
-        return self._request('homescreen', 'POST')
+        return self._request('/wda/homescreen', 'POST')
 
     def healthcheck(self):
         """Hit healthcheck"""
         return self._request('/wda/healthcheck', 'GET')
+
+    def source(self, accessible=False):
+        if accessible:
+            return self._request('/wda/accessibleSource', 'GET').value
+        return self._request('source', 'GET').value
+
+    # Todo
+    # /wda/deactivateApp
+    # /wda/keyboard/dismiss
 
     def session(self, bundle_id=None):
         """
@@ -195,10 +205,6 @@ class Client(object):
                 f.write(raw_value)
         return raw_value
 
-    def source(self):
-        # TODO: not tested
-        return self._request('source', 'GET').value
-
 
 class Session(object):
     def __init__(self, target, session_id):
@@ -224,16 +230,33 @@ class Session(object):
         return httpdo(url, method, data)
 
     def tap(self, x, y):
-        return self._request('/tap/0', data=json.dumps(dict(x=x, y=y)))
+        return self._request('/wda/tap/0', data=json.dumps(dict(x=x, y=y)))
+
+    def double_tap(self, x, y):
+        return self._request('/wda/doubleTap', data=json.dumps(dict(x=x, y=y)))
+
+    def tap_hold(self, x, y, duration=1.0):
+        """
+        Tap and hold for a moment
+
+        Args:
+            - x, y(int): position
+            - duration(float): seconds of hold time
+
+        [[FBRoute POST:@"/wda/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHoldCoordinate:)],
+        """
+        data = json.dumps({'x': x, 'y': y, 'duration': duration})
+        return self._request('/wda/touchAndHold', data=data)
 
     def swipe(self, x1, y1, x2, y2, duration=0.2):
         """
-        duration(float), in the unit of second(NSTimeInterval)
+        Args:
+            - duration(float): in the unit of second(NSTimeInterval)
 
-        [[FBRoute POST:@"/uiaTarget/:uuid/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDrag:)],
+        [[FBRoute POST:@"/wda/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDragCoordinate:)],
         """
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
-        return self._request('/uiaTarget/0/dragfromtoforduration', data=json.dumps(data))
+        return self._request('/wda/dragfromtoforduration', data=json.dumps(data))
 
     def dump(self):
         """ Bad """
@@ -254,7 +277,7 @@ class Session(object):
         For example:
             Size(width=320, height=568)
         """
-        value = self._request('/window/0/size', 'GET').value
+        value = self._request('/window/size', 'GET').value
         w = roundint(value['width'])
         h = roundint(value['height'])
         return namedtuple('Size', ['width', 'height'])(w, h)
@@ -265,7 +288,7 @@ class Session(object):
         """
         if isinstance(value, six.string_types):
             value = list(value)
-        return self._request('/keys', data=json.dumps({'value': value}))
+        return self._request('/wda/keys', data=json.dumps({'value': value}))
 
     @property
     def alert(self):
@@ -422,16 +445,16 @@ class Selector(object):
         Args:
             - duration(float): seconds of hold time
 
-        [[FBRoute POST:@"/uiaElement/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
+        [[FBRoute POST:@"/wda/element/:uuid/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHold:)],
         """
         element = self.wait(timeout)
         eid = element['ELEMENT']
         data = json.dumps({'duration': duration})
-        return self._request(data, suburl='uiaElement/%s/touchAndHold' % eid)
+        return self._request(data, suburl='wda/element/%s/touchAndHold' % eid)
 
     def double_tap(self, x, y):
         """
-        [[FBRoute POST:@"/uiaElement/:uuid/doubleTap"] respondWithTarget:self action:@selector(handleDoubleTap:)],
+        [[FBRoute POST:@"/wda/element/:uuid/doubleTap"] respondWithTarget:self action:@selector(handleDoubleTap:)],
         """
         raise NotImplementedError()
 
@@ -471,7 +494,7 @@ class Selector(object):
             data = json.dumps({'direction': direction})
         else:
             data = json.dumps({'toVisible': True})
-        self._request(data, suburl='uiaElement/{elem_id}/scroll'.format(elem_id=eid))
+        self._request(data, suburl='wda/element/{elem_id}/scroll'.format(elem_id=eid))
         return self
 
     def swipe(self, direction, timeout=None):
@@ -481,6 +504,13 @@ class Selector(object):
         eid = element['ELEMENT']
         data = json.dumps({'direction': direction})
         return self._request(data, suburl='wda/element/%s/swipe' % eid)
+
+    # todo
+    # pinch
+    # touchAndHold
+    # dragfromtoforduration
+    # twoFingerTap
+
 
     def _property(self, name, data='', method='GET', timeout=None, eid=None):
         if not eid:
@@ -518,6 +548,10 @@ class Selector(object):
     def accessible(self):
         """ true or false """
         return self._property('accessible')
+
+    # todo
+    # handleGetIsAccessibilityContainer
+    # [[FBRoute GET:@"/wda/element/:uuid/accessibilityContainer"] respondWithTarget:self action:@selector(handleGetIsAccessibilityContainer:)],
 
     @property
     def displayed(self):
