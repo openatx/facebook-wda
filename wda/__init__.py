@@ -153,10 +153,6 @@ class Client(object):
             return self._request('/wda/accessibleSource', 'GET').value
         return self._request('source', 'GET').value
 
-    # Todo
-    # /wda/deactivateApp
-    # /wda/keyboard/dismiss
-
     def session(self, bundle_id=None):
         """
         Args:
@@ -215,6 +211,14 @@ class Session(object):
         """
         self._target = target.rstrip('/')
         self._sid = session_id
+        # Example session value
+        # "capabilities": {
+        #     "CFBundleIdentifier": "com.netease.aabbcc", 
+        #     "browserName": "?????", 
+        #     "device": "iphone", 
+        #     "sdkVersion": "10.2"
+        # }
+        self.capabilities = self._request('/', 'GET').value['capabilities']
 
     def __str__(self):
         return 'wda.Session (id=%s)' % self._sid
@@ -228,6 +232,14 @@ class Session(object):
     def _request(self, base_url, method='POST', data=None):
         url = urljoin(self._target, 'session', self._sid, base_url)
         return httpdo(url, method, data)
+
+    @property
+    def id(self):
+        return self._sid
+
+    @property
+    def bundle_id(self):
+        return self.capabilities.get('CFBundleIdentifier')
 
     def deactivate(self, duration):
         """Put app into background and than put it back
@@ -553,7 +565,6 @@ class Selector(object):
     # touchAndHold
     # dragfromtoforduration
     # twoFingerTap
-
 
     def _property(self, name, data='', method='GET', timeout=None, eid=None):
         if not eid:

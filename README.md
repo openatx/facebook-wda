@@ -102,6 +102,9 @@ Session operations
 > Note: if element not found in 90s, RuntimeError will be raised
 
 ```py
+# Current bundleId and sessionId
+print s.bundle_id, s.id
+
 # One of <PORTRAIT | LANDSCAPE>
 print s.orientation # expect PORTRAIT
 
