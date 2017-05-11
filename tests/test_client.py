@@ -47,7 +47,6 @@ def test_alert():
     with c.session('com.apple.Health') as s:
         #print s.alert.text
         pass
-        
 
 def test_rect():
     r = wda.Rect(10, 20, 10, 30) # x=10, y=20, w=10, h=30
@@ -59,8 +58,24 @@ def test_rect():
     assert r.center.x == 15 and r.center.y == 35
     assert r.origin.x == 10 and r.origin.y == 20
 
+def test_partial():
+    c = wda.Client(__target)
+    with c.session('com.apple.Preferences') as s:
+        assert s(text = "VP", partial = True).exists
+        assert not s(text = "VP").exists
+        assert s(text = "VPN").exists
+
+def test_alert_wait():
+    c = wda.Client(__target)
+    with c.session('com.apple.Preferences') as s:
+        # start_time = time.time()
+        assert s.alert.wait(20)
+        # print time.time() - start_time
+
 if __name__ == '__main__':
     test_status()
     test_set_text()
     test_scroll()
     # test_session()
+    test_partial()
+    # test_alert_wait()

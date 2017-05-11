@@ -121,7 +121,7 @@ class Rect(object):
     @property
     def bottom(self):
         return self.y+self.height
-    
+
 
 class Client(object):
     def __init__(self, target='http://127.0.0.1:8100'):
@@ -213,9 +213,9 @@ class Session(object):
         self._sid = session_id
         # Example session value
         # "capabilities": {
-        #     "CFBundleIdentifier": "com.netease.aabbcc", 
-        #     "browserName": "?????", 
-        #     "device": "iphone", 
+        #     "CFBundleIdentifier": "com.netease.aabbcc",
+        #     "browserName": "?????",
+        #     "device": "iphone",
         #     "sdkVersion": "10.2"
         # }
         self.capabilities = self._request('/', 'GET').value['capabilities']
@@ -340,17 +340,25 @@ class Alert(object):
                 raise
             return False
         return True
-        
+
     @property
     def text(self):
         return self._request('/alert/text', 'GET').value
+
+    def wait(self, time_out = 2):
+        start_time = time.time()
+        while time.time() - start_time < time_out:
+            if self.exists:
+                return True
+            time.sleep(0.2)
+        return False
 
     def accept(self):
         return self._request('/alert/accept', 'POST')
 
     def dismiss(self):
         return self._request('/alert/dismiss', 'POST')
-    
+
 
 class Keyboard(object):
     def __init__(self, session):
@@ -362,7 +370,7 @@ class Keyboard(object):
 
 
 class Selector(object):
-    def __init__(self, base_url, name=None, text=None, class_name=None, value=None, label=None, xpath=None, index=0):
+    def __init__(self, base_url, name=None, text=None, class_name=None, value=None, label=None, xpath=None, index=0, partial = False):
         '''
         Args:
             - name(str): attr for name
@@ -387,6 +395,7 @@ class Selector(object):
         if xpath and not xpath.startswith('//XCUIElementType'):
             element = '|'.join(xcui_element_types.xcui_element)
             self._xpath = re.sub(r'/('+element+')', '/XCUIElementType\g<1>', xpath)
+        self._partial = True if partial else False
 
     def _request(self, data, suburl='elements', method='POST'):
         return httpdo(urljoin(self._base_url, suburl), method, data=data)
@@ -406,13 +415,13 @@ class Selector(object):
             SyntaxError
         """
         if self._name:
-            using = 'link text'
+            using = 'partial link text' if self._partial else 'link text'
             value = 'name={name}'.format(name=self._name)
         elif self._value:
-            using = 'link text'
+            using = 'partial link text' if self._partial else 'link text'
             value = 'value={value}'.format(value=self._value)
         elif self._label:
-            using = 'link text'
+            using = 'partial link text' if self._partial else 'link text'
             value = 'label={label}'.format(label=self._label)
         elif self._class_name:
             using = 'class name'
@@ -422,11 +431,10 @@ class Selector(object):
             value = self._xpath
         else:
             raise SyntaxError("text or className must be set at least one")
-
         data = json.dumps({'using': using, 'value': value})
         response = self._request(data).value
         elems = []
-        for elem in response: 
+        for elem in response:
             if self._class_name and elem.get('type') != self._class_name:
                 continue
             if self._label and elem.get('label') != self._label:
@@ -479,7 +487,7 @@ class Selector(object):
     def click(self, *args, **kwargs):
         """ Alias of tap """
         return self.tap(*args, **kwargs)
-    
+
     def tap_hold(self, duration=1.0, timeout=None):
         """
         Tap and hold for a moment
