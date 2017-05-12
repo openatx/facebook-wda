@@ -345,9 +345,9 @@ class Alert(object):
     def text(self):
         return self._request('/alert/text', 'GET').value
 
-    def wait(self, time_out = 2):
+    def wait(self, timeout = 2):
         start_time = time.time()
-        while time.time() - start_time < time_out:
+        while time.time() - start_time < timeout:
             if self.exists:
                 return True
             time.sleep(0.2)

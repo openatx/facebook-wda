@@ -131,6 +131,10 @@ s.tap_hold(x, y, 1.0)
 # Find elements
 print s(text="Dashboard").exists
 
+# Find elements with partial text
+# the partial just for text、name、value and label. default is False
+print s(text="Dashbo", partial=True).exists
+
 # Find second element, index from 0
 print s(text="Dashboard")[1]
 
@@ -164,6 +168,8 @@ print s.alert.exists
 print s.alert.text
 s.alert.accept()
 s.alert.dismiss()
+s.alert.wait(5) # if alert apper in 5 second it will return True,else return False
+s.alert.wait() # wait alert apper in 2 second
 
 # s.close() # kill app, no need to call in with
 ```
