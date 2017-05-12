@@ -168,7 +168,7 @@ print s.alert.exists
 print s.alert.text
 s.alert.accept()
 s.alert.dismiss()
-s.alert.wait(5) # if alert apper in 5 second it will return True,else return False
+s.alert.wait(5) # if alert apper in 5 second it will return True,else return False (default 20.0)
 s.alert.wait() # wait alert apper in 2 second
 
 # s.close() # kill app, no need to call in with

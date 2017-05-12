@@ -345,7 +345,7 @@ class Alert(object):
     def text(self):
         return self._request('/alert/text', 'GET').value
 
-    def wait(self, timeout = 2):
+    def wait(self, timeout=20.0):
         start_time = time.time()
         while time.time() - start_time < timeout:
             if self.exists:
@@ -370,7 +370,7 @@ class Keyboard(object):
 
 
 class Selector(object):
-    def __init__(self, base_url, name=None, text=None, class_name=None, value=None, label=None, xpath=None, index=0, partial = False):
+    def __init__(self, base_url, name=None, text=None, class_name=None, value=None, label=None, xpath=None, index=0, partial=False):
         '''
         Args:
             - name(str): attr for name
