@@ -442,6 +442,12 @@ class Selector(object):
             elems.append(elem)
         return elems
 
+    def child(self, **kwargs):
+        if kwargs.get('className'):
+            kwargs['class_name'] = kwargs.get('class_name') or kwargs.pop('className')
+        eid = self.wait(90.0)['ELEMENT']
+        return SelectorChild(eid = eid, base_url = self._base_url, **kwargs)
+
     def clone(self):
         return copy.deepcopy(self)
 
@@ -652,3 +658,39 @@ class Selector(object):
 
     def __len__(self):
         return self.count
+
+
+class SelectorChild(Selector):
+    def __init__(self, eid, base_url, **kwargs):
+        self._eid = eid
+        Selector.__init__(self, base_url, **kwargs)
+
+    @property
+    def elements(self):
+        if self._name:
+            using = 'partial link text' if self._partial else 'link text'
+            value = 'name={name}'.format(name=self._name)
+        elif self._value:
+            using = 'partial link text' if self._partial else 'link text'
+            value = 'value={value}'.format(value=self._value)
+        elif self._label:
+            using = 'partial link text' if self._partial else 'link text'
+            value = 'label={label}'.format(label=self._label)
+        elif self._class_name:
+            using = 'class name'
+            value = self._class_name
+        elif self._xpath:
+            using = 'xpath'
+            value = self._xpath
+        else:
+            raise SyntaxError("text or className must be set at least one")
+        data = json.dumps({'using': using, 'value': value})
+        response = self._request(data, urljoin(self._base_url, "element", self._eid, 'elements')).value
+        elems = []
+        for elem in response:
+            if self._class_name and elem.get('type') != self._class_name:
+                continue
+            if self._label and elem.get('label') != self._label:
+                continue
+            elems.append(elem)
+        return elems

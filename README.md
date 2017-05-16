@@ -138,6 +138,11 @@ print s(text="Dashbo", partial=True).exists
 # Find second element, index from 0
 print s(text="Dashboard")[1]
 
+# Find elements from element
+# child() parameters same as Session()
+s(className = "Cell").child(className = "StaticText")
+s(className = "Cell").child(text = "05:00").tap()
+
 # Tap selected element
 s(text="Dashboard", className='Button').tap()
 

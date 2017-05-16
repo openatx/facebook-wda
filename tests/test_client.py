@@ -72,6 +72,16 @@ def test_alert_wait():
         assert s.alert.wait(20)
         # print time.time() - start_time
 
+def test_child():
+    c = wda.Client(__target)
+    with c.session('com.apple.mobiletimer') as s:
+        time.sleep(5)
+        god = s(className = "Cell")
+        childList = god[1].child(className = "StaticText")
+        for child in childList:
+            print child.text
+        print len(childList)
+
 if __name__ == '__main__':
     test_status()
     test_set_text()
@@ -79,3 +89,4 @@ if __name__ == '__main__':
     # test_session()
     test_partial()
     # test_alert_wait()
+    test_child()
