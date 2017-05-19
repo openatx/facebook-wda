@@ -203,6 +203,20 @@ TouchID
 * Match Touch ID
 * Do not match Touch ID
 
+## Beta api
+
+
+```
+# elems()
+els = s(class_name="Button").elems()
+print els[0].id # element id
+print els[0].name # send http request to wda
+print els[0].name # use cached value
+print els[0].label
+print els[0].class_name
+els[0].tap() # do tap operation
+```
+
 ## iOS Build-in Apps
 **苹果自带应用**
 

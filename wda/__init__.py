@@ -442,19 +442,29 @@ class Selector(object):
             elems.append(elem)
         return elems
 
+    def elems(self):
+        """
+        Returns:
+            Object[]
+        """
+        els = []
+        for el in self.elements:
+            els.append(Object(self._base_url, id=el['ELEMENT'], type=el['type'], label=el['label']))
+        return els
+
     def clone(self):
         return copy.deepcopy(self)
 
     def __getitem__(self, index):
-        count = self.count
-        if index >= count:
-            raise IndexError()
-        elif count == 1:
-            return self
-        else:
-            selector = self.clone()
-            selector._index = index
-            return selector
+        # count = self.count
+        # if index >= count:
+        #     raise IndexError()
+        # elif count == 1:
+        #     return self
+        # else:
+        selector = self.clone()
+        selector._index = index
+        return selector
 
     @property
     def exists(self):
@@ -650,5 +660,63 @@ class Selector(object):
     def text(self):
         return self._property('text')
 
+    @property
+    def name(self):
+        return self.text
+
     def __len__(self):
         return self.count
+
+
+class Object(object):
+    def __init__(self, base_url, id, type, label):
+        """
+        base_url eg: http://localhost:8100/session/$SESSION_ID
+        """
+        self.__base_url = base_url
+        self.__attrs = {}
+
+        self._id = id
+        self._type = type
+        self._label = label
+
+    def __repr__(self):
+        return '<wda.Object(id="{}", class="{}", label={})>'.format(self.id, self._type, repr(self.label))
+
+    def _request(self, method, suburl, data=None):
+        return httpdo(urljoin(self.__base_url, suburl), method, data=data)
+
+    def _property(self, key):
+        if self.__attrs.get(key):
+            return self.__attrs[key]
+        ret = self._request('GET', 'element/%s/%s' %(self._id, key)).value
+        if ret:
+            self.__attrs[key] = ret
+        return ret        
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def label(self):
+        return self._label
+
+    @property
+    def class_name(self):
+        return self._type
+
+    @property
+    def text(self):
+        return self._property('text')
+
+    @property
+    def name(self):
+        return self.text
+
+    # operations
+    def tap(self):
+        self._request('POST', 'element/%s/%s' %(self._id, 'click'))
+        
+    # todo lot of other operations
+    # tap_hold
