@@ -171,6 +171,10 @@ s.alert.dismiss()
 s.alert.wait(5) # if alert apper in 5 second it will return True,else return False (default 20.0)
 s.alert.wait() # wait alert apper in 2 second
 
+s.alert.buttons()
+# example return: ["设置", "好"]
+
+s.alert.click("设置")
 # s.close() # kill app, no need to call in with
 ```
 
@@ -205,16 +209,29 @@ TouchID
 
 ## Beta api
 
-
 ```
 # elems()
 els = s(class_name="Button").elems()
-print els[0].id # element id
-print els[0].name # send http request to wda
-print els[0].name # use cached value
-print els[0].label
-print els[0].class_name
-els[0].tap() # do tap operation
+el = els[0]
+
+# properies
+print el.id # element id
+print el.name # send http request to wda
+print el.name # use cached value
+print el.label
+print el.class_name
+print el.enabled
+print el.accessible
+print el.value
+print el.bounds # Rect object
+
+# functions
+el.tap()
+el.set_text('hello')
+el.clear_text()
+
+# get child elements
+el = el.child(class_name="Button", text="Network").wait()
 ```
 
 ## iOS Build-in Apps
@@ -256,7 +273,10 @@ els[0].tap() # do tap operation
 
 
 ## Reference
-[Source code](https://github.com/facebook/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBElementCommands.m#L62)
+Source code
+
+- [Router](https://github.com/facebook/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBElementCommands.m#L62)
+- [Alert](https://github.com/facebook/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBAlertViewCommands.m#L25)
 
 ## Articles
 * <https://testerhome.com/topics/5524> By [diaojunxiam](https://github.com/diaojunxian)
