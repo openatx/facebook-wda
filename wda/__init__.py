@@ -290,6 +290,17 @@ class Session(object):
         """
         return self._request('orientation', 'GET').value
 
+    def change_orientation(self, orientation):
+        """
+        Change orientation to:
+          LANDSCAPE | PORTRAIT | UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT | UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN
+        Args:
+            - orientation(string): LANDSCAPE | PORTRAIT | UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT |
+                                   UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN
+        """
+        data = json.dumps({'orientation':orientation})
+        return self._request('orientation', data=data)
+
     def window_size(self):
         """
         Return namedtuple
