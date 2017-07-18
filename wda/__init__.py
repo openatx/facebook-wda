@@ -26,6 +26,11 @@ else:
 DEBUG = False
 HTTP_TIMEOUT = 60.0 # unit second
 
+LANDSCAPE = 'LANDSCAPE'
+PORTRAIT = 'PORTRAIT'
+LANDSCAPE_RIGHT = 'UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT'
+PORTRAIT_UPSIDEDOWN = 'UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN'
+
 
 def convert(dictionary):
     """
@@ -289,6 +294,16 @@ class Session(object):
         One of <PORTRAIT | LANDSCAPE>
         """
         return self._request('orientation', 'GET').value
+
+    @orientation.setter
+    def orientation(self, value):
+        """
+        Args:
+            - orientation(string): LANDSCAPE | PORTRAIT | UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT |
+                    UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN
+        """
+        data = json.dumps({'orientation': value})
+        return self._request('orientation', 'POST', data=data)
 
     def window_size(self):
         """

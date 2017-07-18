@@ -108,6 +108,9 @@ print s.bundle_id, s.id
 # One of <PORTRAIT | LANDSCAPE>
 print s.orientation # expect PORTRAIT
 
+# Change orientation
+s.orientation = wda.LANDSCAPE # there are many other directions
+
 # Deactivate App for some time
 s.deactivate(5.0) # 5s
 
@@ -134,6 +137,9 @@ print s(text="Dashboard").exists
 # Find elements with partial text
 # the partial just for text、name、value and label. default is False
 print s(text="Dashbo", partial=True).exists
+
+# Find with xpath and set value
+d(xpath=u"//TextField").set_text("someone@163.com\n")
 
 # Find second element, index from 0
 print s(text="Dashboard")[1]
