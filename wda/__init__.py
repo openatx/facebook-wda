@@ -397,12 +397,13 @@ class Keyboard(object):
 
 
 class Selector(object):
-    def __init__(self, base_url, sub_eid=None, name=None, text=None, class_name=None, value=None, label=None, xpath=None, index=0, partial=False):
+    def __init__(self, base_url, sub_eid=None, name=None, text=None, textContains=None, className=None, class_name=None, value=None, label=None, xpath=None, index=0, partial=False):
         '''
         Args:
             - name(str): attr for name
             - text(str): alias of name
-            - class_name(str): attr of className
+            - textContains(str): conflict with text
+            - className(str): attr of className
             - value(str): attr
             - label(str): attr for label
             - xpath(str): xpath string, a little slow, but works fine
@@ -411,6 +412,11 @@ class Selector(object):
         self._base_url = base_url
         self._sub_eid = sub_eid
 
+        if textContains:
+            if text:
+                raise RuntimeError("text and text_contains can only set one of them")
+            text = textContains
+            partial = True
         if text:
             name = text
         self._index = index
@@ -418,6 +424,11 @@ class Selector(object):
         self._value = six.text_type(value) if value else None
         self._label = six.text_type(label) if label else None
         self._xpath = six.text_type(xpath) if xpath else None
+
+        if class_name:
+            print('Warning: prefer use className instead of class_name')
+        if className:
+            class_name = className
         self._class_name = six.text_type(class_name) if class_name else None
         if class_name and not class_name.startswith('XCUIElementType'):
             self._class_name = 'XCUIElementType' + class_name
@@ -571,13 +582,13 @@ class Selector(object):
         data = json.dumps({'scale': scale, 'velocity': velocity})
         return self._request(data, suburl='wda/element/%s/pinch' % eid)
 
-    def scroll(self, text=None, text_contains=None, direction=None, timeout=None):
+    def scroll(self, text=None, textContains=None, direction=None, timeout=None):
         """
         Scroll to somewhere, if no args provided, scroll to self visible
 
         Args:
             - text (string): element name equals text
-            - text_contains (string): element contains text(donot use it now)
+            - textContains (string): element contains text(donot use it now)
             - direction (string): one of <up|down|left|right>
             - timeout (float): timeout to find start element
 
@@ -587,7 +598,7 @@ class Selector(object):
         Example:
             s(text="Hello").scroll() # scroll to visible
             s(text="Hello").scroll(text="World")
-            s(text="Hello").scroll(text_contains="World")
+            s(text="Hello").scroll(textContains="World")
             s(text="Hello").scroll(direction="right", timeout=5.0)
             s(text="Login").scroll().click()
 
@@ -595,14 +606,14 @@ class Selector(object):
         // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
         // what ios-driver did and sadly, we must copy them.
         """
-        text_contains = None # will raise Coredump of WDA
+        textContains = None # will raise Coredump of WDA
 
         element = self.wait(timeout)
         eid = element['ELEMENT']
         if text:
             data = json.dumps({'name': text})
-        elif text_contains:
-            data = json.dumps({'predicateString': text})
+        elif textContains:
+            data = json.dumps({'predicateString': textContains})
         elif direction:
             data = json.dumps({'direction': direction})
         else:
@@ -728,7 +739,7 @@ class Element(object):
         return self._label
 
     @property
-    def class_name(self):
+    def className(self):
         return self._type
 
     @property
