@@ -5,6 +5,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 
+import functools
 import json
 import base64
 import copy
@@ -24,6 +25,11 @@ else:
 
 DEBUG = False
 HTTP_TIMEOUT = 60.0 # unit second
+
+LANDSCAPE = 'LANDSCAPE'
+PORTRAIT = 'PORTRAIT'
+LANDSCAPE_RIGHT = 'UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT'
+PORTRAIT_UPSIDEDOWN = 'UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN'
 
 
 def convert(dictionary):
@@ -294,6 +300,16 @@ class Session(object):
         """
         return self._request('orientation', 'GET').value
 
+    @orientation.setter
+    def orientation(self, value):
+        """
+        Args:
+            - orientation(string): LANDSCAPE | PORTRAIT | UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT |
+                    UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN
+        """
+        data = json.dumps({'orientation': value})
+        return self._request('orientation', 'POST', data=data)
+
     def window_size(self):
         """
         Return namedtuple
@@ -364,6 +380,17 @@ class Alert(object):
     def dismiss(self):
         return self._request('/alert/dismiss', 'POST')
 
+    def buttons(self):
+        return self._request('/wda/alert/buttons', 'GET').value
+
+    def click(self, button_name):
+        """
+        Args:
+            - button_name: the name of the button
+        """
+        # Actually, It has no difference POST to accept or dismiss
+        return self._request('/alert/accept', 'POST', data={"name": button_name})
+
 
 class Keyboard(object):
     def __init__(self, session):
@@ -375,18 +402,26 @@ class Keyboard(object):
 
 
 class Selector(object):
-    def __init__(self, base_url, name=None, text=None, class_name=None, value=None, label=None, xpath=None, index=0, partial=False):
+    def __init__(self, base_url, sub_eid=None, name=None, text=None, textContains=None, className=None, class_name=None, value=None, label=None, xpath=None, index=0, partial=False):
         '''
         Args:
             - name(str): attr for name
             - text(str): alias of name
-            - class_name(str): attr of className
+            - textContains(str): conflict with text
+            - className(str): attr of className
             - value(str): attr
             - label(str): attr for label
             - xpath(str): xpath string, a little slow, but works fine
             - index(int): useful when found multi elements
         '''
         self._base_url = base_url
+        self._sub_eid = sub_eid
+
+        if textContains:
+            if text:
+                raise RuntimeError("text and text_contains can only set one of them")
+            text = textContains
+            partial = True
         if text:
             name = text
         self._index = index
@@ -394,6 +429,11 @@ class Selector(object):
         self._value = six.text_type(value) if value else None
         self._label = six.text_type(label) if label else None
         self._xpath = six.text_type(xpath) if xpath else None
+
+        if class_name:
+            print('Warning: prefer use className instead of class_name')
+        if className:
+            class_name = className
         self._class_name = six.text_type(class_name) if class_name else None
         if class_name and not class_name.startswith('XCUIElementType'):
             self._class_name = 'XCUIElementType' + class_name
@@ -401,9 +441,20 @@ class Selector(object):
             element = '|'.join(xcui_element_types.xcui_element)
             self._xpath = re.sub(r'/('+element+')', '/XCUIElementType\g<1>', xpath)
         self._partial = True if partial else False
+        self._default_timeout = 90.0
+
+        # # set attributes
+        # def _element_func(name):
+        #     el = self.wait()
+        #     return getattr(el, name)
+            
+        # self.enabled = functools.partial(_element_func, 'enabled')
 
     def _request(self, data, suburl='elements', method='POST'):
-        return httpdo(urljoin(self._base_url, suburl), method, data=data)
+        url = urljoin(self._base_url, suburl)
+        if self._sub_eid:
+            url = urljoin(self._base_url, 'element', self._sub_eid, suburl)
+        return httpdo(url, method, data=data)
 
     @property
     def elements(self):
@@ -450,23 +501,17 @@ class Selector(object):
     def elems(self):
         """
         Returns:
-            Object[]
+            Element[]
         """
         els = []
         for el in self.elements:
-            els.append(Object(self._base_url, id=el['ELEMENT'], type=el['type'], label=el['label']))
+            els.append(Element(self._base_url, id=el['ELEMENT'], type=el['type'], label=el['label']))
         return els
 
     def clone(self):
         return copy.deepcopy(self)
 
     def __getitem__(self, index):
-        # count = self.count
-        # if index >= count:
-        #     raise IndexError()
-        # elif count == 1:
-        #     return self
-        # else:
         selector = self.clone()
         selector._index = index
         return selector
@@ -482,22 +527,28 @@ class Selector(object):
 
         Returns:
             element(json) for example:
-            {"label": "Dashboard"," "type": "XCUIElementTypeStaticText"," "ELEMENT": "E60237CB-5FD8-4D60-A6E4-F54B583931DF'}
+            Element object
         """
         start_time = time.time()
         if timeout is None or timeout <= 0:
-            timeout = 90.0
+            timeout = self._default_timeout
         while start_time+timeout > time.time():
-            elems = self.elements
+            elems = self.elems()
             if len(elems) <= self._index:
                 continue
             return elems[self._index]
         raise RuntimeError("element not found")
 
+    def timeout(self, duration):
+        """
+        Set element wait timeout
+        """
+        self._default_timeout = duration
+        return self
+
     def tap(self, timeout=None):
         element = self.wait(timeout)
-        eid = element['ELEMENT']
-        return self._request("", suburl='element/%s/click' % eid)
+        return element.tap()
 
     def click(self, *args, **kwargs):
         """ Alias of tap """
@@ -536,13 +587,13 @@ class Selector(object):
         data = json.dumps({'scale': scale, 'velocity': velocity})
         return self._request(data, suburl='wda/element/%s/pinch' % eid)
 
-    def scroll(self, text=None, text_contains=None, direction=None, timeout=None):
+    def scroll(self, text=None, textContains=None, direction=None, timeout=None):
         """
         Scroll to somewhere, if no args provided, scroll to self visible
 
         Args:
             - text (string): element name equals text
-            - text_contains (string): element contains text(donot use it now)
+            - textContains (string): element contains text(donot use it now)
             - direction (string): one of <up|down|left|right>
             - timeout (float): timeout to find start element
 
@@ -552,7 +603,7 @@ class Selector(object):
         Example:
             s(text="Hello").scroll() # scroll to visible
             s(text="Hello").scroll(text="World")
-            s(text="Hello").scroll(text_contains="World")
+            s(text="Hello").scroll(textContains="World")
             s(text="Hello").scroll(direction="right", timeout=5.0)
             s(text="Login").scroll().click()
 
@@ -560,14 +611,14 @@ class Selector(object):
         // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
         // what ios-driver did and sadly, we must copy them.
         """
-        text_contains = None # will raise Coredump of WDA
+        textContains = None # will raise Coredump of WDA
 
         element = self.wait(timeout)
         eid = element['ELEMENT']
         if text:
             data = json.dumps({'name': text})
-        elif text_contains:
-            data = json.dumps({'predicateString': text})
+        elif textContains:
+            data = json.dumps({'predicateString': textContains})
         elif direction:
             data = json.dumps({'direction': direction})
         else:
@@ -589,49 +640,30 @@ class Selector(object):
     # dragfromtoforduration
     # twoFingerTap
 
-    def _property(self, name, data='', method='GET', timeout=None, eid=None):
-        if not eid:
-            eid = self.wait(timeout)['ELEMENT']
-        if isinstance(data, dict):
-            data = json.dumps(data)
-        return self._request(data, suburl='element/%s/%s' % (eid, name), method=method).value
-
-    def _wda_property(self, name, data='', method='GET', timeout=None, eid=None):
-        if not eid:
-            eid = self.wait(timeout)['ELEMENT']
-        if isinstance(data, dict):
-            data = json.dumps(data)
-        return self._request(data, suburl='wda/element/%s/%s' % (eid, name), method=method).value
-
     def set_text(self, text, clear=False):
+        el = self.wait()
         if clear:
-            self.clear_text()
-        return self._property('value', data=json.dumps({'value': list(text)}), method='POST')
+            el.clear_text()
+        return el.set_text(text)
 
     def clear_text(self):
-        return self._property('clear', method='POST')
+        return self.wait().clear_text()
 
     def attribute(self, name):
-        """
-        get element attribute
-        //POST element/:uuid/attribute/:name
-        """
-        return self._property('attribute/%s' % name)
+        return self.wait().attribute(name)
 
     @property
     def value(self):
-        """true or false"""
-        return self.attribute('value')
+        return self.wait().attribute('value')
 
     @property
     def enabled(self):
         """ true or false """
-        return self._property('enabled')
+        return self.wait().enabled
 
     @property
     def accessible(self):
-        """ true or false """
-        return self._wda_property('accessible')
+        return self.wait().enabled
 
     # todo
     # handleGetIsAccessibilityContainer
@@ -639,8 +671,7 @@ class Selector(object):
 
     @property
     def displayed(self):
-        """ true or false """
-        return self._property('displayed')
+        return self.wait().displayed
 
     @property
     def bounds(self):
@@ -648,10 +679,7 @@ class Selector(object):
         Return example:
             Rect(x=144, y=28, width=88, height=27)
         """
-        value = self._property('rect')
-        x, y = value['x'], value['y']
-        w, h = value['width'], value['height']
-        return Rect(x, y, w, h)
+        return self.wait().bounds
 
     @property
     def count(self):
@@ -659,11 +687,11 @@ class Selector(object):
 
     @property
     def class_name(self):
-        return self._property('name')
+        return self.wait().class_name
 
     @property
     def text(self):
-        return self._property('text')
+        return self.wait().text
 
     @property
     def name(self):
@@ -673,7 +701,7 @@ class Selector(object):
         return self.count
 
 
-class Object(object):
+class Element(object):
     def __init__(self, base_url, id, type, label):
         """
         base_url eg: http://localhost:8100/session/$SESSION_ID
@@ -684,20 +712,28 @@ class Object(object):
         self._id = id
         self._type = type
         self._label = label
+        self.__props = {'ELEMENT': id, 'type': type, 'label': label}
 
     def __repr__(self):
-        return '<wda.Object(id="{}", class="{}", label={})>'.format(self.id, self._type, repr(self.label))
+        return '<wda.Element(id="{}", class="{}", label={})>'.format(self.id, self._type, repr(self.label))
+
+    def __getitem__(self, key):
+        return self.__props[key]
 
     def _request(self, method, suburl, data=None):
         return httpdo(urljoin(self.__base_url, suburl), method, data=data)
 
-    def _property(self, key):
-        if self.__attrs.get(key):
+    def _prop(self, key, cache=True):
+        if cache and self.__attrs.get(key):
             return self.__attrs[key]
         ret = self._request('GET', 'element/%s/%s' %(self._id, key)).value
-        if ret:
+        if ret and cache:
             self.__attrs[key] = ret
-        return ret        
+        return ret
+
+    def _wda_prop(self, key):
+        ret = self._request('GET', 'wda/element/%s/%s' %(self._id, key)).value
+        return ret
 
     @property
     def id(self):
@@ -708,20 +744,62 @@ class Object(object):
         return self._label
 
     @property
-    def class_name(self):
+    def className(self):
         return self._type
 
     @property
     def text(self):
-        return self._property('text')
+        return self._prop('text')
+
+    @property
+    def displayed(self):
+        return self._prop("displayed", cache=False)
 
     @property
     def name(self):
         return self.text
 
+    @property
+    def accessible(self):
+        return self._wda_prop("accessible")
+
+    @property
+    def value(self):
+        return self.attribute('value')
+
+    @property
+    def enabled(self):
+        return self._prop('enabled', cache=False)
+
+    @property
+    def bounds(self):
+        value = self._prop('rect')
+        x, y = value['x'], value['y']
+        w, h = value['width'], value['height']
+        return Rect(x, y, w, h)
+
     # operations
     def tap(self):
         self._request('POST', 'element/%s/%s' %(self._id, 'click'))
+
+    def set_text(self, value):
+        # Test result:
+        # {"value": list(value)} or {"value": value} works
+        self._request('POST', 'element/%s/%s' %(self._id, 'value'), {'value': value})
+
+    def clear_text(self):
+        self._request('POST', 'element/%s/%s' %(self._id, 'clear'))
+
+    def attribute(self, name):
+        """
+        get element attribute
+        //POST element/:uuid/attribute/:name
+        """
+        return self._prop('attribute/%s' % name)
+
+    def child(self, **kwargs):
+        return Selector(self.__base_url, self._id, **kwargs)
         
     # todo lot of other operations
     # tap_hold
+
