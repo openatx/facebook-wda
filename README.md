@@ -97,6 +97,13 @@ print s.orientation
 s.close()
 ```
 
+For web browser like Safari you can define page whit which will be opened:
+```py
+s = c.session('com.apple.mobilesafari', '-u https://www.google.com/ncr')
+print s.orientation
+s.close()
+```
+
 Session operations
 
 > Note: if element not found in 90s, RuntimeError will be raised
