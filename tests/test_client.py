@@ -26,7 +26,7 @@ def test_session_without_arguments():
 
 def test_session_with_argument():
     c = wda.Client(__target)
-    sess = c.session('com.apple.mobilesafari', '-u https://www.google.com/ncr')
+    sess = c.session('com.apple.mobilesafari', ['-u', 'https://www.google.com/ncr'])
     print sess
     time.sleep(2.0)
     sess.tap(200, 200)

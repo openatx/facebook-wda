@@ -163,8 +163,7 @@ class Client(object):
         """
         Args:
             - bundle_id(str): the app bundle id
-            - arguments (str) : "-u https://www.google.com/ncr" : arguments need to be passed to WDA as list,
-                                so we are making split(' ') action after space character
+            - arguments (list) : ['-u', 'https://www.google.com/ncr']
 
         WDA Return json like
 
@@ -188,8 +187,8 @@ class Client(object):
                 raise RuntimeError("no session created ever")
             return Session(self._target, sid)
         else:
-            if arguments:
-                data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id, 'arguments': arguments.split(' ')}})
+            if arguments and type(arguments) is list:
+                data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id, 'arguments': arguments}})
             else:
                 data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
             res = self._request('session', 'POST', data=data)
