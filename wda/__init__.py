@@ -159,10 +159,11 @@ class Client(object):
             return self._request('/wda/accessibleSource', 'GET').value
         return self._request('source', 'GET').value
 
-    def session(self, bundle_id=None):
+    def session(self, bundle_id=None, arguments=None):
         """
         Args:
             - bundle_id(str): the app bundle id
+            - arguments (list) : ['-u', 'https://www.google.com/ncr']
 
         WDA Return json like
 
@@ -186,7 +187,10 @@ class Client(object):
                 raise RuntimeError("no session created ever")
             return Session(self._target, sid)
         else:
-            data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
+            if arguments and type(arguments) is list:
+                data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id, 'arguments': arguments}})
+            else:
+                data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
             res = self._request('session', 'POST', data=data)
             return Session(self._target, res.sessionId)
 
@@ -797,3 +801,4 @@ class Element(object):
         
     # todo lot of other operations
     # tap_hold
+
