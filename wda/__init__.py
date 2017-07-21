@@ -31,6 +31,8 @@ PORTRAIT = 'PORTRAIT'
 LANDSCAPE_RIGHT = 'UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT'
 PORTRAIT_UPSIDEDOWN = 'UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN'
 
+alert_callback = None
+
 
 def convert(dictionary):
     """
@@ -455,6 +457,19 @@ class Selector(object):
             url = urljoin(self._base_url, 'element', self._sub_eid, suburl)
         return httpdo(url, method, data=data)
 
+    def _safe_request(self, data, suburl='elements', method='POST', depth=0):
+        try:
+            return self._request(data)
+        except WDAError as e:
+            if depth >= 10:
+                raise
+            if e.status != 26:
+                raise
+            if not callable(alert_callback):
+                raise
+            alert_callback()
+            return self._safe_request(data, suburl, method, depth=depth+1)
+
     @property
     def elements(self):
         """
@@ -487,7 +502,7 @@ class Selector(object):
         else:
             raise SyntaxError("text or className must be set at least one")
         data = json.dumps({'using': using, 'value': value})
-        response = self._request(data).value
+        response = self._safe_request(data).value
         elems = []
         for elem in response:
             if self._class_name and elem.get('type') != self._class_name:
