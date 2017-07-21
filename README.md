@@ -257,7 +257,7 @@ import wda
 s = wda.Client().session()
 
 def _alert_callback():
-	s.alert.accept()
+    s.alert.accept()
 
 wda.alert_callback = _alert_callback
 
