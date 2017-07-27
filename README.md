@@ -7,6 +7,8 @@ Facebook WebDriverAgent Python Client Library (not official)
 
 Most functions finished.
 
+Recommended use this version of WebDriverAgent (already tested) [31 May 2017 a8def24ca67f8a74dd709b899c8ea539c9c488ea](https://github.com/facebook/WebDriverAgent/tree/a8def24ca67f8a74dd709b899c8ea539c9c488ea)
+
 Implemented apis describe in <https://github.com/facebook/WebDriverAgent/wiki/Queries>
 
 This library has been used in project atx <https://github.com/codeskyblue/AutomatorX>
