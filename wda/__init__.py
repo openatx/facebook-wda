@@ -214,7 +214,7 @@ class Client(object):
         value = self._request('screenshot').value
         raw_value = base64.b64decode(value)
         if png_filename:
-            with open(png_filename, 'w') as f:
+            with open(png_filename, 'wb') as f:
                 f.write(raw_value)
         return raw_value
 
