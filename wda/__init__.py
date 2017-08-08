@@ -161,11 +161,12 @@ class Client(object):
             return self._request('/wda/accessibleSource', 'GET').value
         return self._request('source', 'GET').value
 
-    def session(self, bundle_id=None, arguments=None):
+    def session(self, bundle_id=None, arguments=None, extra_caps=None):
         """
         Args:
             - bundle_id(str): the app bundle id
             - arguments (list) : ['-u', 'https://www.google.com/ncr']
+            - extra_caps (dict) : extra capabilities to be added to desiredCapabilities
 
         WDA Return json like
 
@@ -189,10 +190,14 @@ class Client(object):
                 raise RuntimeError("no session created ever")
             return Session(self._target, sid)
         else:
+            caps = {'bundleId': bundle_id}
             if arguments and type(arguments) is list:
-                data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id, 'arguments': arguments}})
-            else:
-                data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
+                caps['arguments'] = arguments
+
+            if extra_caps and type(extra_caps) is dict:
+                caps.update(extra_caps)
+
+            data = json.dumps({'desiredCapabilities': caps})
             res = self._request('session', 'POST', data=data)
             return Session(self._target, res.sessionId)
 
@@ -209,7 +214,7 @@ class Client(object):
         value = self._request('screenshot').value
         raw_value = base64.b64decode(value)
         if png_filename:
-            with open(png_filename, 'w') as f:
+            with open(png_filename, 'wb') as f:
                 f.write(raw_value)
         return raw_value
 
