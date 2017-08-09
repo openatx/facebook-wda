@@ -191,11 +191,17 @@ class Client(object):
             return Session(self._target, sid)
         else:
             caps = {'bundleId': bundle_id}
-            if arguments and type(arguments) is list:
-                caps['arguments'] = arguments
+            if arguments is not None:
+                if type(arguments) is list:
+                    caps['arguments'] = arguments
+                else:
+                    raise TypeError('arguments must be a list')
 
-            if extra_caps and type(extra_caps) is dict:
-                caps.update(extra_caps)
+            if extra_caps is not None:
+                if type(extra_caps) is dict:
+                    caps.update(extra_caps)
+                else:
+                    raise TypeError('extra_caps must be a dict')
 
             data = json.dumps({'desiredCapabilities': caps})
             res = self._request('session', 'POST', data=data)
