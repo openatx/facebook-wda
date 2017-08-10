@@ -161,11 +161,12 @@ class Client(object):
             return self._request('/wda/accessibleSource', 'GET').value
         return self._request('source', 'GET').value
 
-    def session(self, bundle_id=None, arguments=None):
+    def session(self, bundle_id=None, arguments=None, extra_caps=None):
         """
         Args:
             - bundle_id(str): the app bundle id
             - arguments (list) : ['-u', 'https://www.google.com/ncr']
+            - extra_caps (dict) : extra capabilities to be added to desiredCapabilities
 
         WDA Return json like
 
@@ -189,10 +190,20 @@ class Client(object):
                 raise RuntimeError("no session created ever")
             return Session(self._target, sid)
         else:
-            if arguments and type(arguments) is list:
-                data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id, 'arguments': arguments}})
-            else:
-                data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
+            caps = {'bundleId': bundle_id}
+            if arguments is not None:
+                if type(arguments) is list:
+                    caps['arguments'] = arguments
+                else:
+                    raise TypeError('arguments must be a list')
+
+            if extra_caps is not None:
+                if type(extra_caps) is dict:
+                    caps.update(extra_caps)
+                else:
+                    raise TypeError('extra_caps must be a dict')
+
+            data = json.dumps({'desiredCapabilities': caps})
             res = self._request('session', 'POST', data=data)
             return Session(self._target, res.sessionId)
 
