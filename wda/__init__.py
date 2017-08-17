@@ -26,6 +26,13 @@ else:
 DEBUG = False
 HTTP_TIMEOUT = 60.0 # unit second
 
+LANDSCAPE = 'LANDSCAPE'
+PORTRAIT = 'PORTRAIT'
+LANDSCAPE_RIGHT = 'UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT'
+PORTRAIT_UPSIDEDOWN = 'UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN'
+
+alert_callback = None
+
 
 def convert(dictionary):
     """
@@ -154,10 +161,12 @@ class Client(object):
             return self._request('/wda/accessibleSource', 'GET').value
         return self._request('source', 'GET').value
 
-    def session(self, bundle_id=None):
+    def session(self, bundle_id=None, arguments=None, extra_caps=None):
         """
         Args:
             - bundle_id(str): the app bundle id
+            - arguments (list) : ['-u', 'https://www.google.com/ncr']
+            - extra_caps (dict) : extra capabilities to be added to desiredCapabilities
 
         WDA Return json like
 
@@ -181,7 +190,20 @@ class Client(object):
                 raise RuntimeError("no session created ever")
             return Session(self._target, sid)
         else:
-            data = json.dumps({'desiredCapabilities': {'bundleId': bundle_id}})
+            caps = {'bundleId': bundle_id}
+            if arguments is not None:
+                if type(arguments) is list:
+                    caps['arguments'] = arguments
+                else:
+                    raise TypeError('arguments must be a list')
+
+            if extra_caps is not None:
+                if type(extra_caps) is dict:
+                    caps.update(extra_caps)
+                else:
+                    raise TypeError('extra_caps must be a dict')
+
+            data = json.dumps({'desiredCapabilities': caps})
             res = self._request('session', 'POST', data=data)
             return Session(self._target, res.sessionId)
 
@@ -198,7 +220,7 @@ class Client(object):
         value = self._request('screenshot').value
         raw_value = base64.b64decode(value)
         if png_filename:
-            with open(png_filename, 'w') as f:
+            with open(png_filename, 'wb') as f:
                 f.write(raw_value)
         return raw_value
 
@@ -289,6 +311,16 @@ class Session(object):
         One of <PORTRAIT | LANDSCAPE>
         """
         return self._request('orientation', 'GET').value
+
+    @orientation.setter
+    def orientation(self, value):
+        """
+        Args:
+            - orientation(string): LANDSCAPE | PORTRAIT | UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT |
+                    UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN
+        """
+        data = json.dumps({'orientation': value})
+        return self._request('orientation', 'POST', data=data)
 
     def window_size(self):
         """
@@ -382,12 +414,13 @@ class Keyboard(object):
 
 
 class Selector(object):
-    def __init__(self, base_url, sub_eid=None, name=None, text=None, class_name=None, value=None, label=None, xpath=None, index=0, partial=False):
+    def __init__(self, base_url, sub_eid=None, name=None, text=None, textContains=None, className=None, class_name=None, value=None, label=None, xpath=None, index=0, partial=False):
         '''
         Args:
             - name(str): attr for name
             - text(str): alias of name
-            - class_name(str): attr of className
+            - textContains(str): conflict with text
+            - className(str): attr of className
             - value(str): attr
             - label(str): attr for label
             - xpath(str): xpath string, a little slow, but works fine
@@ -396,6 +429,11 @@ class Selector(object):
         self._base_url = base_url
         self._sub_eid = sub_eid
 
+        if textContains:
+            if text:
+                raise RuntimeError("text and text_contains can only set one of them")
+            text = textContains
+            partial = True
         if text:
             name = text
         self._index = index
@@ -403,6 +441,11 @@ class Selector(object):
         self._value = six.text_type(value) if value else None
         self._label = six.text_type(label) if label else None
         self._xpath = six.text_type(xpath) if xpath else None
+
+        if class_name:
+            print('Warning: prefer use className instead of class_name')
+        if className:
+            class_name = className
         self._class_name = six.text_type(class_name) if class_name else None
         if class_name and not class_name.startswith('XCUIElementType'):
             self._class_name = 'XCUIElementType' + class_name
@@ -424,6 +467,19 @@ class Selector(object):
         if self._sub_eid:
             url = urljoin(self._base_url, 'element', self._sub_eid, suburl)
         return httpdo(url, method, data=data)
+
+    def _safe_request(self, data, suburl='elements', method='POST', depth=0):
+        try:
+            return self._request(data)
+        except WDAError as e:
+            if depth >= 10:
+                raise
+            if e.status != 26:
+                raise
+            if not callable(alert_callback):
+                raise
+            alert_callback()
+            return self._safe_request(data, suburl, method, depth=depth+1)
 
     @property
     def elements(self):
@@ -457,7 +513,7 @@ class Selector(object):
         else:
             raise SyntaxError("text or className must be set at least one")
         data = json.dumps({'using': using, 'value': value})
-        response = self._request(data).value
+        response = self._safe_request(data).value
         elems = []
         for elem in response:
             if self._class_name and elem.get('type') != self._class_name:
@@ -556,13 +612,13 @@ class Selector(object):
         data = json.dumps({'scale': scale, 'velocity': velocity})
         return self._request(data, suburl='wda/element/%s/pinch' % eid)
 
-    def scroll(self, text=None, text_contains=None, direction=None, timeout=None):
+    def scroll(self, text=None, textContains=None, direction=None, timeout=None):
         """
         Scroll to somewhere, if no args provided, scroll to self visible
 
         Args:
             - text (string): element name equals text
-            - text_contains (string): element contains text(donot use it now)
+            - textContains (string): element contains text(donot use it now)
             - direction (string): one of <up|down|left|right>
             - timeout (float): timeout to find start element
 
@@ -572,7 +628,7 @@ class Selector(object):
         Example:
             s(text="Hello").scroll() # scroll to visible
             s(text="Hello").scroll(text="World")
-            s(text="Hello").scroll(text_contains="World")
+            s(text="Hello").scroll(textContains="World")
             s(text="Hello").scroll(direction="right", timeout=5.0)
             s(text="Login").scroll().click()
 
@@ -580,14 +636,14 @@ class Selector(object):
         // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
         // what ios-driver did and sadly, we must copy them.
         """
-        text_contains = None # will raise Coredump of WDA
+        textContains = None # will raise Coredump of WDA
 
         element = self.wait(timeout)
         eid = element['ELEMENT']
         if text:
             data = json.dumps({'name': text})
-        elif text_contains:
-            data = json.dumps({'predicateString': text})
+        elif textContains:
+            data = json.dumps({'predicateString': textContains})
         elif direction:
             data = json.dumps({'direction': direction})
         else:
@@ -713,7 +769,7 @@ class Element(object):
         return self._label
 
     @property
-    def class_name(self):
+    def className(self):
         return self._type
 
     @property
@@ -771,3 +827,4 @@ class Element(object):
         
     # todo lot of other operations
     # tap_hold
+

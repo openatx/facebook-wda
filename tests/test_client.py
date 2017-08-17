@@ -14,9 +14,19 @@ def test_status():
     c.screenshot()
 
 
-def test_session():
+def test_session_without_arguments():
     c = wda.Client(__target)
     sess = c.session('com.apple.Health')
+    print sess
+    time.sleep(2.0)
+    sess.tap(200, 200)
+    time.sleep(5.0)
+    print sess.window_size()
+    sess.close()
+
+def test_session_with_argument():
+    c = wda.Client(__target)
+    sess = c.session('com.apple.mobilesafari', ['-u', 'https://www.google.com/ncr'])
     print sess
     time.sleep(2.0)
     sess.tap(200, 200)

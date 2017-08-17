@@ -7,6 +7,8 @@ Facebook WebDriverAgent Python Client Library (not official)
 
 Most functions finished.
 
+Recommended use this version of WebDriverAgent (already tested) [31 May 2017 a8def24ca67f8a74dd709b899c8ea539c9c488ea](https://github.com/facebook/WebDriverAgent/tree/a8def24ca67f8a74dd709b899c8ea539c9c488ea)
+
 Implemented apis describe in <https://github.com/facebook/WebDriverAgent/wiki/Queries>
 
 This library has been used in project atx <https://github.com/codeskyblue/AutomatorX>
@@ -97,6 +99,13 @@ print s.orientation
 s.close()
 ```
 
+For web browser like Safari you can define page whit which will be opened:
+```py
+s = c.session('com.apple.mobilesafari', ['-u', 'https://www.google.com/ncr'])
+print s.orientation
+s.close()
+```
+
 Session operations
 
 > Note: if element not found in 90s, RuntimeError will be raised
@@ -107,6 +116,9 @@ print s.bundle_id, s.id
 
 # One of <PORTRAIT | LANDSCAPE>
 print s.orientation # expect PORTRAIT
+
+# Change orientation
+s.orientation = wda.LANDSCAPE # there are many other directions
 
 # Deactivate App for some time
 s.deactivate(5.0) # 5s
@@ -133,7 +145,11 @@ print s(text="Dashboard").exists
 
 # Find elements with partial text
 # the partial just for text、name、value and label. default is False
-print s(text="Dashbo", partial=True).exists
+# print s(text="Dashbo", partial=True).exists # Deprecated
+print s(textContains="Dashbo").exists
+
+# Find with xpath and set value
+d(xpath=u"//TextField").set_text("someone@163.com\n")
 
 # Find second element, index from 0
 print s(text="Dashboard")[1]
@@ -160,8 +176,8 @@ s.keyboard.dismiss()
 s(className="Image").swipe("left")
 
 # Pinch
-s(class_name="Map").pinch(2, 1) # scale=2, speed=1
-s(class_name="Map").pinch(0.1, -1) # scale=0.1, speed=-1 (I donot very understand too)
+s(className="Map").pinch(2, 1) # scale=2, speed=1
+s(className="Map").pinch(0.1, -1) # scale=0.1, speed=-1 (I donot very understand too)
 
 # alert
 print s.alert.exists
@@ -211,7 +227,7 @@ TouchID
 
 ```
 # elems()
-els = s(class_name="Button").elems()
+els = s(className="Button").elems()
 el = els[0]
 
 # properies
@@ -219,7 +235,7 @@ print el.id # element id
 print el.name # send http request to wda
 print el.name # use cached value
 print el.label
-print el.class_name
+print el.className
 print el.enabled
 print el.accessible
 print el.value
@@ -231,8 +247,25 @@ el.set_text('hello')
 el.clear_text()
 
 # get child elements
-el = el.child(class_name="Button", text="Network").wait()
+el = el.child(className="Button", text="Network").wait()
 ```
+
+## How to handle alert message automaticly
+For example
+
+```python
+import wda
+
+s = wda.Client().session()
+
+def _alert_callback():
+    s.alert.accept()
+
+wda.alert_callback = _alert_callback
+
+# do operations, when alert popup, it will auto accept
+s(type="Button").click()
+```	
 
 ## iOS Build-in Apps
 **苹果自带应用**
@@ -260,7 +293,7 @@ el = el.child(class_name="Button", text="Network").wait()
 | 提醒事项 | com.apple.reminders |
 | Desktop | com.apple.springboard (Start this will cause your iPhone reboot) |
 
-**第三方应用**
+**第三方应用 Thirdparty**
 
 |   Name | Bundle ID          |
 |--------|--------------------|
@@ -271,6 +304,15 @@ el = el.child(class_name="Button", text="Network").wait()
 | Skype | com.skype.tomskype |
 | Chrome | com.google.chrome.ios |
 
+
+Another way to list apps installed on you phone is use `ideviceinstaller`
+install with `brew install ideviceinstaller`
+
+List apps with command
+
+```sh
+$ ideviceinstaller -l
+```
 
 ## Reference
 Source code
@@ -290,3 +332,4 @@ Source code
 
 ## LICENSE
 [MIT](LICENSE)
+
