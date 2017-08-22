@@ -459,7 +459,7 @@ class Selector(object):
         # def _element_func(name):
         #     el = self.wait()
         #     return getattr(el, name)
-            
+
         # self.enabled = functools.partial(_element_func, 'enabled')
 
     def _request(self, data, suburl='elements', method='POST'):
@@ -516,9 +516,9 @@ class Selector(object):
         response = self._safe_request(data).value
         elems = []
         for elem in response:
-            if self._class_name and elem.get('type') != self._class_name:
+            if self._class_name and elem.get('type', self._class_name) != self._class_name:
                 continue
-            if self._label and elem.get('label') != self._label:
+            if self._label and elem.get('label', self._label) != self._label:
                 continue
             elems.append(elem)
         return elems
@@ -530,6 +530,10 @@ class Selector(object):
         """
         els = []
         for el in self.elements:
+            if 'type' not in el.keys():
+                el['type'] = None
+            if 'label' not in el.keys():
+                el['label'] = None
             els.append(Element(self._base_url, id=el['ELEMENT'], type=el['type'], label=el['label']))
         return els
 
@@ -824,7 +828,7 @@ class Element(object):
 
     def child(self, **kwargs):
         return Selector(self.__base_url, self._id, **kwargs)
-        
+
     # todo lot of other operations
     # tap_hold
 
