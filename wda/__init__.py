@@ -516,9 +516,9 @@ class Selector(object):
         response = self._safe_request(data).value
         elems = []
         for elem in response:
-            if self._class_name and elem.get('type') != self._class_name:
+            if self._class_name and elem.get('type', self._class_name) != self._class_name:
                 continue
-            if self._label and elem.get('label') != self._label:
+            if self._label and elem.get('label', self._label) != self._label:
                 continue
             elems.append(elem)
         return elems
