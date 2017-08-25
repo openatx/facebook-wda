@@ -1,91 +1,122 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
 import os
 import time
+import xml.etree.ElementTree as ET
 
 import wda
 
-__target = os.getenv("DEVICE_TARGET") or 'http://localhost:8100'
+# Note !!!
+# Set env-var DEVICE_URL before run tests
+# run test with
+# $ py.test
 
-def test_status():
-    c = wda.Client(__target)
-    print c.status()
+wda.DEBUG = True
+__target = os.getenv("DEVICE_TARGET") or 'http://localhost:8100'
+c = wda.Client()
+
+def setup_function():
+    """ initial test environment """
+    wda.DEBUG = True
+    c.healthcheck()
+
+
+def test_client_status():
+    """ Example response
+    {
+        "state": "success",
+        "os": {
+            "version": "10.3.3",
+            "name": "iOS"
+        },
+        "ios": {
+            "ip": "192.168.2.85",
+            "simulatorVersion": "10.3.3"
+        },
+        "build": {
+            "time": "Aug  8 2017 17:06:05"
+        },
+        "sessionId": "xx...x.x.x.x.x.x" # added by python code
+    }
+    """
+    st = c.status() # json value
+    assert st['state'] == 'success'
+    assert 'sessionId' in st
+
+
+def test_client_session_without_argument():
+    s = c.session('com.apple.Health')
+    session_id = c.status()['sessionId']
+    assert s.id == session_id
+    assert s.bundle_id == 'com.apple.Health'
+    s.close()
+
+
+def test_client_session_with_argument():
+    """
+    In mose case, used to open browser with url
+    """
+    with c.session('com.apple.mobilesafari', ['-u', 'https://www.google.com/ncr']) as s:
+        time.sleep(2.0)
+        assert s(name='ReloadButton').exists
+
+
+def test_client_home():
+    """ error will raise if status is not 0 when call home """
+    c.home()
+
+def test_client_screenshot():
+    wda.DEBUG = False
     c.screenshot()
 
 
-def test_session_without_arguments():
-    c = wda.Client(__target)
-    sess = c.session('com.apple.Health')
-    print sess
-    time.sleep(2.0)
-    sess.tap(200, 200)
-    time.sleep(5.0)
-    print sess.window_size()
-    sess.close()
+def test_client_source():
+    wda.DEBUG = False
+    xml_data = c.source()
+    root = ET.fromstring(xml_data.encode('utf-8'))
+    assert root.tag == 'XCUIElementTypeApplication'
 
-def test_session_with_argument():
-    c = wda.Client(__target)
-    sess = c.session('com.apple.mobilesafari', ['-u', 'https://www.google.com/ncr'])
-    print sess
-    time.sleep(2.0)
-    sess.tap(200, 200)
-    time.sleep(5.0)
-    print sess.window_size()
-    sess.close()
+    json_data = c.source(format='json')
+    assert json_data['type'] == 'Application'
 
-def test_set_text():
-    c = wda.Client(__target)
-    with c.session('com.apple.Health') as s:
-        print 'switch to element'
-        time.sleep(3)
-        print s.orientation
-        # print s(text='Month').elements
-        print s(text='Dashboard', class_name='Button').elements
-        # s.set_text("Hello world")
-        time.sleep(3)
+    json_data = c.source(accessible=True)
+    assert json_data['type'] == 'Application'
 
-def test_scroll():
-    c = wda.Client(__target)
-    with c.session('com.apple.Preferences') as s:
-        s(class_name='Table').scroll('Developer')
-        s(text='Developer').tap()
-        time.sleep(3)
 
 def test_alert():
-    c = wda.Client(__target)
-    with c.session('com.apple.Health') as s:
-        #print s.alert.text
-        pass
-
-def test_rect():
-    r = wda.Rect(10, 20, 10, 30) # x=10, y=20, w=10, h=30
-    assert r.left == 10
-    assert r.right == 20
-    assert r.bottom == 50
-    assert r.top == 20
-    assert r.x == 10 and r.y == 20 and r.width == 10 and r.height == 30
-    assert r.center.x == 15 and r.center.y == 35
-    assert r.origin.x == 10 and r.origin.y == 20
+    """
+    Skip: because alert not always happens
+    """
+    return
+    # c = wda.Client(__target)
+    # with c.session('com.apple.Health') as s:
+    #     #print s.alert.text
+    #     pass
 
 def test_partial():
-    c = wda.Client(__target)
+    c = wda.Client()
     with c.session('com.apple.Preferences') as s:
-        assert s(text = "VP", partial = True).exists
-        assert not s(text = "VP").exists
-        assert s(text = "VPN").exists
+        assert s(text="WLA", partial=True).exists
+        assert not s(text="WLA").exists
+        assert s(text="WLAN").exists
+
 
 def test_alert_wait():
-    c = wda.Client(__target)
-    with c.session('com.apple.Preferences') as s:
-        # start_time = time.time()
-        assert s.alert.wait(20)
-        # print time.time() - start_time
+    pass
+    """ Skip because alert not always happens """
+    # c = wda.Client(__target)
+    # with c.session('com.apple.Preferences') as s:
+    #     # start_time = time.time()
+    #     assert s.alert.wait(20)
+    #     # print time.time() - start_time
 
-if __name__ == '__main__':
-    test_status()
-    test_set_text()
-    test_scroll()
-    # test_session()
-    test_partial()
-    # test_alert_wait()
+
+# def test_scroll():
+#     c = wda.Client()
+#     with c.session('com.apple.Preferences') as s:
+#         s(class_name='Table').scroll('Developer')
+#         s(text='Developer').tap()
+#         time.sleep(3)

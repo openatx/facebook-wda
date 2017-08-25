@@ -56,6 +56,10 @@ import wda
 # Enable debug will see http Request and Response
 # wda.DEBUG = True
 c = wda.Client('http://localhost:8100')
+
+# get env from $DEVICE_URL if no arguments pass to wda.Client
+# http://localhost:8100 is the default value if $DEVICE_URL is empty
+c = wda.Client()
 ```
 
 A `wda.WDAError` will be raised if communite with WDA went wrong.
@@ -136,12 +140,27 @@ s.double_tap(200, 200)
 
 # Simulate swipe, utilizing drag api
 s.swipe(x1, y1, x2, y2, 0.5) # 0.5s
+s.swipe_left()
+s.swipe_right()
+s.swipe_up()
+s.swipe_down()
 
 # tap hold
 s.tap_hold(x, y, 1.0)
 
-# Find elements
+# Find elements, return immediately
 print s(text="Dashboard").exists
+
+# Default timeout is 90 seconds
+# But you can change by
+s.set_timeout(10.0)
+
+# Wait until exists, return Element object
+el = s(text='Dashboard').wait()
+el = s(text='Dashboard').wait(timeout=10.0) # with timeout, default 90.0
+
+# Wait gone
+s(text='Dashboard').wait_gone(timeout=10.0)
 
 # Find elements with partial text
 # the partial just for text、name、value and label. default is False
