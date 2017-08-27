@@ -498,8 +498,8 @@ class Selector(object):
             predicate=None,
             id=None,
             className=None, classChain=None,
-            name=None, nameContains=None,
-            text=None, textContains=None,
+            name=None, nameContains=None, nameMatches=None,
+            text=None, textContains=None, textMatches=None,
             value=None, valueContains=None, 
             label=None, labelContains=None,
             visible=None, enabled=None,
@@ -514,8 +514,10 @@ class Selector(object):
             classChain (str): string of ios chain query, eg: **/XCUIElementTypeOther[`value BEGINSWITH 'blabla'`]
             name (str): attr for name
             nameContains (str): attr of name contains
+            nameMatches (str): regex string
             text (str): alias of name
             textContains (str): alias of nameContains
+            textMatches (str): alias of nameMatches
             value (str): attr of value, not used in most times
             valueContains (str): attr of value contains
             label (str): attr for label
@@ -564,6 +566,7 @@ class Selector(object):
         self.class_name = className if not className or className.startswith('XCUIElementType') else 'XCUIElementType'+className
         self.name = name or text
         self.name_part = nameContains or textContains
+        self.name_regex = nameMatches or textMatches
         self.value = value
         self.value_part = valueContains
         self.label = label
@@ -614,6 +617,8 @@ class Selector(object):
             qs.append("name == '%s'" % self.name)
         if self.name_part:
             qs.append("name CONTAINS '%s'" % self.name_part)
+        if self.name_regex:
+            qs.append("name MATCHES '%s'" % self.name_regex)
         if self.label:
             qs.append("label == '%s'" % self.label)
         if self.label_part:

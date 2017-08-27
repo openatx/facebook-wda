@@ -33,3 +33,7 @@ def test_element_tap_hold():
     s = c.session()
     s(name='Settings').tap_hold(2.0)
     assert s(classChain='**/Icon[`name == "Weather"`]/Button[`name == "DeleteButton"`]').get(2.0, raise_error=False)
+
+def test_element_name_matches():
+    s = c.session()
+    assert s(nameMatches='^S.ttings?').exists
