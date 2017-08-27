@@ -21,7 +21,7 @@ c = wda.Client()
 def setup_function():
     """ initial test environment """
     wda.DEBUG = True
-    c.healthcheck()
+    c.home()
 
 
 def test_client_status():
@@ -59,13 +59,15 @@ def test_client_session_with_argument():
     """
     In mose case, used to open browser with url
     """
-    with c.session('com.apple.mobilesafari', ['-u', 'https://www.google.com/ncr']) as s:
-        time.sleep(2.0)
-        assert s(name='ReloadButton').exists
+    with c.session('com.apple.mobilesafari', ['-u', 'https://www.github.com']) as s:
+        time.sleep(1.0)
+        s(id='URL')
+        assert s(name='Share', className="Button").exists
 
 
 def test_client_home():
     """ error will raise if status is not 0 when call home """
+    time.sleep(2.0) # prevent healthcheck + home == double tap home()
     c.home()
 
 def test_client_screenshot():
@@ -96,10 +98,11 @@ def test_alert():
     #     #print s.alert.text
     #     pass
 
-def test_partial():
+def test_text_contains():
     c = wda.Client()
     with c.session('com.apple.Preferences') as s:
-        assert s(text="WLA", partial=True).exists
+        s(text='WLAN').get()
+        assert s(textContains="WLA").exists
         assert not s(text="WLA").exists
         assert s(text="WLAN").exists
 

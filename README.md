@@ -7,11 +7,11 @@ Facebook WebDriverAgent Python Client Library (not official)
 
 Most functions finished.
 
-Recommended use this version of WebDriverAgent (already tested) [31 May 2017 a8def24ca67f8a74dd709b899c8ea539c9c488ea](https://github.com/facebook/WebDriverAgent/tree/a8def24ca67f8a74dd709b899c8ea539c9c488ea)
+Tested with [facebook/WebDriverAgent](https://github.com/facebook/WebDriverAgent/tree/59d5a3473bc88825cbb7ac74e86421b0d2192b52) 2017/08/27
 
 Implemented apis describe in <https://github.com/facebook/WebDriverAgent/wiki/Queries>
 
-This library has been used in project atx <https://github.com/codeskyblue/AutomatorX>
+This library has been used in project atx <https://github.com/NetEaseGame/AutomatorX>
 
 ## Installation
 1. You need to start WebDriverAgent by yourself
@@ -104,7 +104,7 @@ s.close()
 ```
 
 For web browser like Safari you can define page whit which will be opened:
-```py
+```python
 s = c.session('com.apple.mobilesafari', ['-u', 'https://www.google.com/ncr'])
 print s.orientation
 s.close()
@@ -114,7 +114,7 @@ Session operations
 
 > Note: if element not found in 90s, RuntimeError will be raised
 
-```py
+```python
 # Current bundleId and sessionId
 print s.bundle_id, s.id
 
@@ -148,48 +148,75 @@ s.swipe_down()
 # tap hold
 s.tap_hold(x, y, 1.0)
 
-# Find elements, return immediately
+# Hide keyboard (not working in simulator), did not success using latest WDA
+s.keyboard_dismiss()
+```
+
+Find element
+
+```python
+# For example, expect: True or False
+print s(id="URL").exists
+
+# Other examples
+s(id='URL')
+s(name='URL')
+s(text="URL") # text is alias of name
+s(nameContains='UR')
+s(label='Address')
+s(labelContains='Addr')
+s(name='URL', index=1) # find the second element. index starts from 0
+
+# combines search conditions
+# attributes bellow can combines
+# :"className", "name", "label", "visible", "enabled"
+s(className='Button', name='URL', visible=True, labelContains="Addr")
+
+# for professional users
+s(xpath='//Button[@name="URL"]')
+s(classChain='**/Button[`name == "URL"`]')
+s(predicate='name LIKE "UR*"')
+s('name LIKE "U*L"') # predicate is the first argument, without predicate= is ok
+```
+
+Element operations
+
+```python
+# Check if elements exists
 print s(text="Dashboard").exists
 
-# Default timeout is 90 seconds
+# Find all matches elements, return Array of Element object
+s(text='Dashboard').find_elements()
+
+# Get first match Element object
+# The function get() is very important.
+# when elements founded in 10 seconds(:default:), Element object returns
+# or WDAElementNotFoundError raises
+e = s(text='Dashboard').get(timeout=10.0)
+e.tap() # tap element
+
+# Python magic tricks
+# Some times, I just hate to type "get()"
+# 	using python magic function "__getattr__", it is ok with out type "get()"
+s(text='Dashboard').tap()
+
+# Default timeout is 10 seconds
 # But you can change by
 s.set_timeout(10.0)
 
-# Wait until exists, return Element object
-el = s(text='Dashboard').wait()
-el = s(text='Dashboard').wait(timeout=10.0) # with timeout, default 90.0
-
-# Wait gone
-s(text='Dashboard').wait_gone(timeout=10.0)
-
-# Find elements with partial text
-# the partial just for text、name、value and label. default is False
-# print s(text="Dashbo", partial=True).exists # Deprecated
-print s(textContains="Dashbo").exists
-
-# Find with xpath and set value
-d(xpath=u"//TextField").set_text("someone@163.com\n")
-
-# Find second element, index from 0
-print s(text="Dashboard")[1]
-
-# Tap selected element
-s(text="Dashboard", className='Button').tap()
-
-# Tap and hold
-s(text="Dashboard").tap_hold(2.0) # tapAndHold for 2.0s
+# do element operations
+e.tap()
+e.clear_text()
+e.tap_hold(2.0) # tapAndHold for 2.0s
+e.scroll() # scroll to visiable
 
 # Set text
-s(text="Name").set_text("Hello")
+e.set_text("Hello WDA") # normal usage
+e.set_text("Hello WDA\n") # send text with enter
+e.set_text("\b\b\b") # delete 3 chars
 
-# Clear text
-s(text="Name").clear_text()
-
-# Scroll to visible
-s(text="Name").scroll()
-
-# Hide keyboard (not working in simulator)
-s.keyboard.dismiss()
+# Wait gone (not finished yet)
+s(text='Dashboard').wait_gone(timeout=10.0)
 
 # Swipe
 s(className="Image").swipe("left")
@@ -198,11 +225,28 @@ s(className="Image").swipe("left")
 s(className="Map").pinch(2, 1) # scale=2, speed=1
 s(className="Map").pinch(0.1, -1) # scale=0.1, speed=-1 (I donot very understand too)
 
-# alert
+# properties (bool)
+e.accessible
+e.displayed
+e.enabled
+
+# properties (str)
+e.text # ex: Dashboard
+e.className # ex: XCUIElementTypeStaticText
+e.value # ex: github.com
+
+# Bounds return namedtuple
+e.bounds # ex: Rect(x=144, y=28, width=88.0, height=27.0)
+e.bounds.x # expect 144
+```
+
+Alert
+
+```python
 print s.alert.exists
 print s.alert.text
-s.alert.accept()
-s.alert.dismiss()
+s.alert.accept() # Actually do click first alert button
+s.alert.dismiss() # Actually do click second alert button
 s.alert.wait(5) # if alert apper in 5 second it will return True,else return False (default 20.0)
 s.alert.wait() # wait alert apper in 2 second
 
@@ -213,27 +257,6 @@ s.alert.click("设置")
 # s.close() # kill app, no need to call in with
 ```
 
-Properties
-
-```py
-e = s(text='Dashboard')
-e.count # same as len(e)
-
-# bool props
-e.exists
-e.accessible
-e.displayed
-e.enabled
-
-# return namedtuple
-e.bounds # ex: Rect(x=144, y=28, width=88.0, height=27.0)
-e.bounds.x # expect 144
-
-# other
-e.text # ex: Dashboard
-e.class_name # ex: XCUIElementTypeStaticText
-```
-
 ## TODO
 longTap not done pinch(not found in WDA)
 
@@ -242,34 +265,7 @@ TouchID
 * Match Touch ID
 * Do not match Touch ID
 
-## Beta api
-
-```
-# elems()
-els = s(className="Button").elems()
-el = els[0]
-
-# properies
-print el.id # element id
-print el.name # send http request to wda
-print el.name # use cached value
-print el.label
-print el.className
-print el.enabled
-print el.accessible
-print el.value
-print el.bounds # Rect object
-
-# functions
-el.tap()
-el.set_text('hello')
-el.clear_text()
-
-# get child elements
-el = el.child(className="Button", text="Network").wait()
-```
-
-## How to handle alert message automaticly
+## How to handle alert message automaticly (not tested)
 For example
 
 ```python

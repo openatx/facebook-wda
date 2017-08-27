@@ -4,7 +4,7 @@
 from __future__ import unicode_literals
 
 
-xcui_element = [
+ELEMENTS = [
     'Any',
     'Other',
     'Application',
