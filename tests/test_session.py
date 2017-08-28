@@ -58,12 +58,10 @@ def test_session_swipe():
     assert s(name="Airplane Mode").wait_gone(2.0, raise_error=False)
 
 def test_session_set_text():
-    with c.session('com.apple.MobileSMS') as s:
-        s(name=u'Compose').click()
-        body_field = s(name='messageBodyField')
-        body_field.click()
-        s.send_keys('Hello world')
-        assert body_field.value == 'Hello world'
+    with c.session('com.apple.mobilesafari') as s:
+        s(name='URL', className='Button').set_text("status.github.com")
+        url = s(name='URL', className='TextField').get()
+        assert url.value == 'status.github.com'
 
 def test_session_window_size():
     s = c.session()
@@ -71,7 +69,7 @@ def test_session_window_size():
     assert wsize.width == 320
     assert wsize.height == 568
 
-def test_session_send_keys_and_keyboard_dismiss():
+def test_session_send_keys():
     with c.session('com.apple.mobilesafari') as s:
         u = s(label='Address', className='Button')
         u.clear_text()
@@ -85,7 +83,7 @@ def test_session_keyboard_dismiss():
         u = s(label='Address', className='Button')
         u.clear_text()
         s.send_keys('www.github.com')
-        
+
         assert s(className='Keyboard').exists
         s.keyboard_dismiss()
         assert not s(className='Keyboard').exists

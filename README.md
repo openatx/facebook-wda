@@ -48,7 +48,7 @@ wda.HTTP_TIMEOUT = 60.0 # default 60.0 seconds
 ```
 
 ## How to use
-Create a client
+### Create a client
 
 ```py
 import wda
@@ -65,7 +65,7 @@ c = wda.Client()
 A `wda.WDAError` will be raised if communite with WDA went wrong.
 
 
-Other APIs
+### Client
 
 ```py
 # Show status
@@ -110,10 +110,7 @@ print s.orientation
 s.close()
 ```
 
-Session operations
-
-> Note: if element not found in 90s, RuntimeError will be raised
-
+### Session operations
 ```python
 # Current bundleId and sessionId
 print s.bundle_id, s.id
@@ -152,13 +149,15 @@ s.tap_hold(x, y, 1.0)
 s.keyboard_dismiss()
 ```
 
-Find element
+### Find element
+> Note: if element not found, `WDAElementNotFoundError` will be raised
 
 ```python
 # For example, expect: True or False
-print s(id="URL").exists
+# using id to find element and check if exists
+s(id="URL").exists # return True or False
 
-# Other examples
+# using id or other query conditions
 s(id='URL')
 s(name='URL')
 s(text="URL") # text is alias of name
@@ -171,15 +170,60 @@ s(name='URL', index=1) # find the second element. index starts from 0
 # attributes bellow can combines
 # :"className", "name", "label", "visible", "enabled"
 s(className='Button', name='URL', visible=True, labelContains="Addr")
+```
 
-# for professional users
+More powerful findding method
+
+```python
 s(xpath='//Button[@name="URL"]')
 s(classChain='**/Button[`name == "URL"`]')
 s(predicate='name LIKE "UR*"')
 s('name LIKE "U*L"') # predicate is the first argument, without predicate= is ok
 ```
 
-Element operations
+### Element operations (eg: `tap`, `scroll`, `set_text` etc...)
+Exmaple search element and tap
+
+```python
+# Get first match Element object
+# The function get() is very important.
+# when elements founded in 10 seconds(:default:), Element object returns
+# or WDAElementNotFoundError raises
+e = s(text='Dashboard').get(timeout=10.0)
+# s(text='Dashboard') is Selector
+# e is Element object
+e.tap() # tap element
+```
+
+>Some times, I just hate to type `.get()`
+
+Using python magic tricks to do it again.
+
+```python
+# 	using python magic function "__getattr__", it is ok with out type "get()"
+s(text='Dashboard').tap()
+# same as
+s(text='Dashboard').get().tap()
+```
+
+Note: Python magic tricks can not used on get attributes
+
+```python
+# Accessing attrbutes, you have to use get()
+s(text='Dashboard').get().value
+
+# Not right
+# s(text='Dashboard').value # Bad, always return None
+```
+
+Click element if exists
+
+```python
+s(text='Dashboard').click_exists() # return immediately if not found
+s(text='Dashboard').click_exists(timeout=5.0) # wait for 5s
+```
+
+Other Element operations
 
 ```python
 # Check if elements exists
@@ -188,17 +232,11 @@ print s(text="Dashboard").exists
 # Find all matches elements, return Array of Element object
 s(text='Dashboard').find_elements()
 
-# Get first match Element object
-# The function get() is very important.
-# when elements founded in 10 seconds(:default:), Element object returns
-# or WDAElementNotFoundError raises
-e = s(text='Dashboard').get(timeout=10.0)
-e.tap() # tap element
+# Use index to find second element
+s(text='Dashboard')[1].exists
 
-# Python magic tricks
-# Some times, I just hate to type "get()"
-# 	using python magic function "__getattr__", it is ok with out type "get()"
-s(text='Dashboard').tap()
+# Use child to search sub elements
+s(text='Dashboard').child(className='Cell').exists
 
 # Default timeout is 10 seconds
 # But you can change by
@@ -206,16 +244,23 @@ s.set_timeout(10.0)
 
 # do element operations
 e.tap()
+e.click() # alias of tap
 e.clear_text()
+e.set_text("Hello world")
 e.tap_hold(2.0) # tapAndHold for 2.0s
-e.scroll() # scroll to visiable
+
+e.scroll() # scroll to make element visiable
+
+# directions can be "up", "down", "left", "right"
+# swipe distance default to its height or width according to the direction
+e.scroll('up')
 
 # Set text
 e.set_text("Hello WDA") # normal usage
 e.set_text("Hello WDA\n") # send text with enter
 e.set_text("\b\b\b") # delete 3 chars
 
-# Wait gone (not finished yet)
+# Wait element gone
 s(text='Dashboard').wait_gone(timeout=10.0)
 
 # Swipe
@@ -236,8 +281,8 @@ e.className # ex: XCUIElementTypeStaticText
 e.value # ex: github.com
 
 # Bounds return namedtuple
-e.bounds # ex: Rect(x=144, y=28, width=88.0, height=27.0)
-e.bounds.x # expect 144
+rect = e.bounds # ex: Rect(x=144, y=28, width=88.0, height=27.0)
+rect.x # expect 144
 ```
 
 Alert
@@ -254,7 +299,6 @@ s.alert.buttons()
 # example return: ["设置", "好"]
 
 s.alert.click("设置")
-# s.close() # kill app, no need to call in with
 ```
 
 ## TODO
@@ -265,7 +309,7 @@ TouchID
 * Match Touch ID
 * Do not match Touch ID
 
-## How to handle alert message automaticly (not tested)
+## How to handle alert message automaticly (need more tests)
 For example
 
 ```python
@@ -273,10 +317,10 @@ import wda
 
 s = wda.Client().session()
 
-def _alert_callback():
-    s.alert.accept()
+def _alert_callback(session):
+    session.alert.accept()
 
-wda.alert_callback = _alert_callback
+s.set_alert_callback(_alert_callback)
 
 # do operations, when alert popup, it will auto accept
 s(type="Button").click()
@@ -295,6 +339,7 @@ s(type="Button").click()
 | Health | com.apple.Health |
 | Settings | com.apple.Preferences |
 | Watch | com.apple.Bridge |
+| Maps | com.apple.Maps |
 | Game Center | com.apple.gamecenter |
 | Wallet | com.apple.Passbook |
 | 电话 | com.apple.mobilephone |

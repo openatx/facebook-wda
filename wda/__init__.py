@@ -60,6 +60,7 @@ def httpdo(url, method='GET', data=None):
     """
     Do HTTP Request
     """
+    start = time.time()
     if isinstance(data, dict):
         data = json.dumps(data)
     if DEBUG:
@@ -75,7 +76,8 @@ def httpdo(url, method='GET', data=None):
 
     retjson = response.json()
     if DEBUG:
-        print('Return: {}'.format(json.dumps(retjson, indent=4)))
+        ms = (time.time() - start) * 1000
+        print('Return ({:.0f}ms): {}'.format(ms, json.dumps(retjson, indent=4)))
     r = convert(retjson)
     if r.status != 0:
         raise WDAError(r.status, r.value)
@@ -83,18 +85,35 @@ def httpdo(url, method='GET', data=None):
 
 
 class HTTPClient(object):
-    def __init__(self, address):
+    def __init__(self, address, alert_callback=None):
         """
         Args:
             address (string): url address eg: http://localhost:8100
+            alert_callback (func): function to call when alert popup
         """
         self.address = address
+        self.alert_callback = alert_callback
     
     def new_client(self, path):
-        return HTTPClient(self.address.rstrip('/') + '/' + path.lstrip('/'))
+        return HTTPClient(self.address.rstrip('/') + '/' + path.lstrip('/'), self.alert_callback)
 
     def fetch(self, method, url, data=None):
-        return httpdo(urljoin(self.address, url), method, data)
+        return self._fetch_no_alert(method, url, data)
+        # return httpdo(urljoin(self.address, url), method, data)
+    
+    def _fetch_no_alert(self, method, url, data=None, depth=0):
+        target_url = urljoin(self.address, url)
+        try:
+            return httpdo(target_url, method, data)
+        except WDAError as err:
+            if depth >= 10:
+                raise
+            if err.status != 26:
+                raise
+            if not callable(self.alert_callback):
+                raise
+            self.alert_callback()
+            return self._fetch_no_alert(method, url, data, depth=depth+1)
 
     def __getattr__(self, key):
         """ Handle GET,POST,DELETE, etc ... """
@@ -323,6 +342,21 @@ class Session(object):
     def bundle_id(self):
         """ the session matched bundle id """
         return self.capabilities.get('CFBundleIdentifier')
+    
+    def set_alert_callback(self, callback):
+        """
+        Args:
+            callback (func): called when alert popup
+        
+        Example of callback:
+
+            def callback(session):
+                session.alert.accept()
+        """
+        if callable(callable):
+            self.http.alert_callback = functools.partial(callback, self)
+        else:
+            self.http.alert_callback = None
 
     def open_url(self, url):
         """
@@ -492,13 +526,15 @@ class Selector(object):
     def __init__(self, httpclient, #, sub_eid=None, 
             predicate=None,
             id=None,
-            className=None, classChain=None,
+            className=None, type=None,
             name=None, nameContains=None, nameMatches=None,
             text=None, textContains=None, textMatches=None,
             value=None, valueContains=None, 
             label=None, labelContains=None,
             visible=None, enabled=None,
+            classChain=None,
             xpath=None,
+            parent_class_chains=[],
             timeout=10.0,
             index=0):
         '''
@@ -506,7 +542,7 @@ class Selector(object):
             predicate (str): predicate string
             id (str): raw identifier
             className (str): attr of className
-            classChain (str): string of ios chain query, eg: **/XCUIElementTypeOther[`value BEGINSWITH 'blabla'`]
+            type (str): alias of className
             name (str): attr for name
             nameContains (str): attr of name contains
             nameMatches (str): regex string
@@ -519,6 +555,7 @@ class Selector(object):
             labelContains (str): attr for label contains
             visible (bool): is visible
             enabled (bool): is enabled
+            classChain (str): string of ios chain query, eg: **/XCUIElementTypeOther[`value BEGINSWITH 'blabla'`]
             xpath (str): xpath string, a little slow, but works fine
             timeout (float): maxium wait element time, default 10.0s
             index (int): index of founded elements
@@ -558,7 +595,7 @@ class Selector(object):
 
         self.predicate = predicate
         self.id = id
-        self.class_name = className if not className or className.startswith('XCUIElementType') else 'XCUIElementType'+className
+        self.class_name = className or type
         self.name = name or text
         self.name_part = nameContains or textContains
         self.name_regex = nameMatches or textMatches
@@ -573,6 +610,15 @@ class Selector(object):
         self.xpath = self._fix_xcui_type(xpath)
         self.class_chain = self._fix_xcui_type(classChain)
         self.timeout = timeout
+        # some fixtures
+        if self.class_name and not self.class_name.startswith('XCUIElementType'):
+             self.class_name = 'XCUIElementType'+self.class_name
+        if self.name_regex:
+            if not self.name_regex.startswith('^'):
+                self.name_regex = '.*' + self.name_regex
+            if not self.name_regex.startswith('$'):
+                self.name_regex = self.name_regex + '.*'
+        self.parent_class_chains = parent_class_chains
     
     def _fix_xcui_type(self, s):
         if s is None:
@@ -592,21 +638,14 @@ class Selector(object):
         ]
         """
         element_ids = []
-        for v in self._safe_request({'using': using, 'value': value}).value:
+        for v in self.http.post('/elements', {'using': using, 'value': value}).value:
             element_ids.append(v['ELEMENT'])
         return element_ids
 
-    def find_element_ids(self):
-        elems = []
-        if self.id:
-            return self._wdasearch('id', self.id)
+    def _gen_class_chain(self):
+        # just return if aleady exists predicate
         if self.predicate:
-            return self._wdasearch('predicate string', self.predicate)
-        if self.xpath:
-            return self._wdasearch('xpath', self.xpath)
-        if self.class_chain:
-            return self._wdasearch('class chain', self.class_chain)
-
+            return '/XCUIElementTypeAny[`' + self.predicate + '`]'
         qs = []
         if self.name:
             qs.append("name == '%s'" % self.name)
@@ -622,16 +661,33 @@ class Selector(object):
             qs.append("value == '%s'" % self.value)
         if self.value_part:
             qs.append("value CONTAINS ’%s'" % self.value_part)
-        if self.class_name:
-            qs.append("type == '%s'" % self.class_name)
         if self.visible is not None:
             qs.append("visible == %s" % 'true' if self.visible else 'false')
         if self.enabled is not None:
             qs.append("enabled == %s" % 'true' if self.enabled else 'false')
         predicate = ' AND '.join(qs)
-        if predicate == '':
-            raise ValueError('Need to set at least one query conditions')
-        return self._wdasearch('predicate string', predicate)
+        chain = '/' + (self.class_name or 'XCUIElementTypeAny')
+        if predicate:
+            chain = chain + '[`' + predicate + '`]'
+        if self.index:
+            chain = chain + '[%d]' % self.index
+        return chain
+
+    def find_element_ids(self):
+        elems = []
+        if self.id:
+            return self._wdasearch('id', self.id)
+        if self.predicate:
+            return self._wdasearch('predicate string', self.predicate)
+        if self.xpath:
+            return self._wdasearch('xpath', self.xpath)
+        if self.class_chain:
+            return self._wdasearch('class chain', self.class_chain)
+
+        chain = '**' + ''.join(self.parent_class_chains) + self._gen_class_chain()
+        if DEBUG:
+            print('CHAIN:', chain)
+        return self._wdasearch('class chain', chain)
 
     def find_elements(self):
         """
@@ -643,6 +699,9 @@ class Selector(object):
             e = Element(self.http.new_client(''), element_id)
             es.append(e)
         return es
+
+    def count(self):
+        return len(self.find_element_ids())
 
     def get(self, timeout=None, raise_error=True):
         """
@@ -662,10 +721,11 @@ class Selector(object):
             timeout = self.timeout
         while True:
             elems = self.find_elements()
-            if len(elems) > self.index:
-                return elems[self.index]
+            if len(elems) > 0:
+                return elems[0]
             if start_time + timeout < time.time():
                 break
+            time.sleep(0.01)
         if raise_error:
             raise WDAElementNotFoundError("element not found")
 
@@ -679,36 +739,40 @@ class Selector(object):
         self.timeout = s
         return self
 
-    def _safe_request(self, data, suburl='elements', method='POST', depth=0):
-        try:
-            return self.http.post('/elements', data)
-        except WDAError as e:
-            if depth >= 10:
-                raise
-            if e.status != 26:
-                raise
-            if not callable(alert_callback):
-                raise
-            alert_callback()
-            return self._safe_request(data, suburl, method, depth=depth+1)
-
-    def clone(self):
-        return copy.deepcopy(self)
-
     def __getitem__(self, index):
-        selector = self.clone()
-        selector.index = index
-        return selector
+        self.index = index
+        return self
+    
+    def child(self, *args, **kwargs):
+        chain = self._gen_class_chain()
+        kwargs['parent_class_chains'] = self.parent_class_chains + [chain]
+        return Selector(self.http, *args, **kwargs)
 
     @property
     def exists(self):
         return len(self.find_element_ids()) > self.index
+    
+    def click_exists(self, timeout=0):
+        """
+        Wait element and perform click
+
+        Args:
+            timeout (float): timeout for wait
+        
+        Returns:
+            bool: if successfully clicked
+        """
+        e = self.get(timeout=timeout, raise_error=False)
+        if e is None:
+            return False
+        e.click()
+        return True
 
     def wait(self, timeout=None, raise_error=True):
         """ alias of get
         Args:
             timeout (float): timeout seconds
-            raise_error (bool): whether to raise error if element not found
+            raise_error (bool): default true, whether to raise error if element not found
         
         Raises:
             WDAElementNotFoundError
@@ -736,66 +800,6 @@ class Selector(object):
         if not raise_error:
             return False
         raise WDAElementNotDisappearError("element not gone")       
-
-    def pinch(self, scale, velocity, timeout=None):
-        """
-        Args:
-            - scale(float): scale must be greater than zero
-            - velocity(float): velocity must be less than zero when scale is less than 1
-        """
-        raise RuntimeError("Not finished yet")
-        element = self.wait(timeout)
-        eid = element['ELEMENT']
-        data = json.dumps({'scale': scale, 'velocity': velocity})
-        return self._request(data, suburl='wda/element/%s/pinch' % eid)
-
-    def scroll(self, text=None, textContains=None, direction=None, timeout=None):
-        """
-        Scroll to somewhere, if no args provided, scroll to self visible
-
-        Args:
-            - text (string): element name equals text
-            - textContains (string): element contains text(donot use it now)
-            - direction (string): one of <up|down|left|right>
-            - timeout (float): timeout to find start element
-
-        Returns:
-            self
-
-        Example:
-            s(text="Hello").scroll() # scroll to visible
-            s(text="Hello").scroll(text="World")
-            s(text="Hello").scroll(textContains="World")
-            s(text="Hello").scroll(direction="right", timeout=5.0)
-            s(text="Login").scroll().click()
-
-        The comment in WDA source code looks funny
-        // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
-        // what ios-driver did and sadly, we must copy them.
-        """
-        raise RuntimeError("Not finished yet")
-        textContains = None # will raise Coredump of WDA
-
-        element = self.wait(timeout)
-        eid = element['ELEMENT']
-        if text:
-            data = json.dumps({'name': text})
-        elif textContains:
-            data = json.dumps({'predicateString': textContains})
-        elif direction:
-            data = json.dumps({'direction': direction})
-        else:
-            data = json.dumps({'toVisible': True})
-        self._request(data, suburl='wda/element/{elem_id}/scroll'.format(elem_id=eid))
-        return self
-
-    # def swipe(self, direction, timeout=None):
-    #     if direction not in ['up', 'down', 'left', 'right']:
-    #         raise ValueError
-    #     element = self.wait(timeout)
-    #     eid = element['ELEMENT']
-    #     data = json.dumps({'direction': direction})
-    #     return self._request(data, suburl='wda/element/%s/swipe' % eid)
 
     # todo
     # pinch
@@ -849,20 +853,28 @@ class Element(object):
         return self._prop('text')
 
     @property
+    def name(self):
+        return self._prop('name')
+
+    @property
     def displayed(self):
         return self._prop("displayed")
 
     @property
-    def name(self):
-        return self.text
+    def enabled(self):
+        return self._prop('enabled')
 
     @property
     def accessible(self):
         return self._wda_prop("accessible")
 
     @property
+    def accessibility_container(self):
+        return self._wda_prop('accessibilityContainer')
+
+    @property
     def value(self):
-        return self.attribute('value')
+        return self._prop('attribute/value')
 
     @property
     def enabled(self):
@@ -898,18 +910,42 @@ class Element(object):
         """
         return self._wda_req('post', '/touchAndHold', {'duration': duration})
 
+    def scroll(self, direction='visible', distance=1.0):
+        """
+        Args:
+            direction (str): one of "visible", "up", "down", "left", "right"
+            distance (float): swipe distance, only works when direction is not "visible"
+               
+        Raises:
+            ValueError
+
+        distance=1.0 means, element (width or height) multiply 1.0
+        """
+        if direction == 'visible':
+            return self._wda_req('post', '/scroll', {'toVisible': True})
+        elif direction in ['up', 'down', 'left', 'right']:
+            return self._wda_req('post', '/scroll', {'direction': direction, 'distance': distance})
+        else:
+            raise ValueError("Invalid direction")
+    
+    def pinch(self, scale, velocity):
+        """
+        Args:
+            scale (float): scale must > 0
+            velocity (float): velocity must be less than zero when scale is less than 1
+        
+        Example:
+            pinchIn  -> scale:0.5, velocity: -1
+            pinchOut -> scale:2.0, velocity: 1
+        """
+        data = {'scale': scale, 'velocity': velocity}
+        return self._wda_req('post', '/pinch', data)
+
     def set_text(self, value):
         return self._req('post', '/value', {'value': value})
 
     def clear_text(self):
         return self._req('post', '/clear')
-
-    def attribute(self, name):
-        """
-        get element attribute
-        //POST element/:uuid/attribute/:name
-        """
-        return self._prop('attribute/%s' % name)
 
     # def child(self, **kwargs):
     #     return Selector(self.__base_url, self._id, **kwargs)
