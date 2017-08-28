@@ -167,10 +167,6 @@ class Client(object):
         if url is None:
             url = os.environ.get('DEVICE_URL', 'http://localhost:8100')
         self.http = HTTPClient(url)
-        self._target = url
-
-    def _request(self, base_url, method='GET', data=None):
-        return httpdo(urljoin(self._target, base_url), method, data)
 
     def status(self):
         res = self.http.get('status')
@@ -238,7 +234,7 @@ class Client(object):
             if not sid:
                 raise RuntimeError("no session created ever")
             http = self.http.new_client('session/'+sid)
-            return Session(http, self._target, sid)
+            return Session(http, sid)
 
         if arguments and type(arguments) is not list:
             raise TypeError('arguments must be a list')
@@ -262,7 +258,7 @@ class Client(object):
         })
         res = self.http.post('session', data)
         httpclient = self.http.new_client('session/'+res.sessionId)
-        return Session(httpclient, self._target, res.sessionId)
+        return Session(httpclient, res.sessionId)
 
     def screenshot(self, png_filename=None):
         """
@@ -290,14 +286,14 @@ class Client(object):
 
 
 class Session(object):
-    def __init__(self, httpclient, target, session_id):
+    def __init__(self, httpclient, session_id):
         """
         Args:
             - target(string): for example, http://127.0.0.1:8100
             - session_id(string): wda session id
         """
         self.http = httpclient
-        self._target = target.rstrip('/')
+        self._target = None
         # self._sid = session_id
         # Example session value
         # "capabilities": {
@@ -319,16 +315,13 @@ class Session(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
-    def _request(self, base_url, method='POST', data=None):
-        url = urljoin(self._target, 'session', self._sid, base_url)
-        return httpdo(url, method, data)
-
     @property
     def id(self):
         return self._sid
 
     @property
     def bundle_id(self):
+        """ the session matched bundle id """
         return self.capabilities.get('CFBundleIdentifier')
 
     def open_url(self, url):
@@ -354,7 +347,7 @@ class Session(object):
         return self.http.post('/wda/tap/0', dict(x=x, y=y))
 
     def double_tap(self, x, y):
-        return self._request('/wda/doubleTap', dict(x=x, y=y))
+        return self.http.post('/wda/doubleTap', dict(x=x, y=y))
 
     def tap_hold(self, x, y, duration=1.0):
         """
@@ -366,18 +359,18 @@ class Session(object):
 
         [[FBRoute POST:@"/wda/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHoldCoordinate:)],
         """
-        data = json.dumps({'x': x, 'y': y, 'duration': duration})
-        return self._request('/wda/touchAndHold', data=data)
+        data = {'x': x, 'y': y, 'duration': duration}
+        return self.http.post('/wda/touchAndHold', data=data)
 
-    def swipe(self, x1, y1, x2, y2, duration=0.2):
+    def swipe(self, x1, y1, x2, y2, duration=0):
         """
         Args:
-            - duration(float): in the unit of second(NSTimeInterval)
+            duration (float): start coordinate press duration (seconds)
 
         [[FBRoute POST:@"/wda/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDragCoordinate:)],
         """
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
-        return self._request('/wda/dragfromtoforduration', data=data)
+        return self.http.post('/wda/dragfromtoforduration', data=data)
 
     def swipe_left(self):
         w, h = self.window_size()
@@ -401,7 +394,7 @@ class Session(object):
         Return string
         One of <PORTRAIT | LANDSCAPE>
         """
-        return self._request('orientation', 'GET').value
+        return self.http.get('orientation').value
 
     @orientation.setter
     def orientation(self, value):
@@ -410,17 +403,15 @@ class Session(object):
             - orientation(string): LANDSCAPE | PORTRAIT | UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT |
                     UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN
         """
-        data = json.dumps({'orientation': value})
-        return self._request('orientation', 'POST', data=data)
+        return self.http.post('orientation', data={'orientation': value})
 
     def window_size(self):
         """
-        Return namedtuple
-
-        For example:
-            Size(width=320, height=568)
+        Returns:
+            namedtuple: eg
+                Size(width=320, height=568)
         """
-        value = self._request('/window/size', 'GET').value
+        value = self.http.get('/window/size').value
         w = roundint(value['width'])
         h = roundint(value['height'])
         return namedtuple('Size', ['width', 'height'])(w, h)
@@ -434,6 +425,10 @@ class Session(object):
         return self.http.post('/wda/keys', data={'value': value})
 
     def keyboard_dismiss(self):
+        """
+        Not working for now
+        """
+        raise RuntimeError("not pass tests, this method is not allowed to use")
         self.http.post('/wda/keyboard/dismiss')
 
     @property
@@ -441,7 +436,7 @@ class Session(object):
         return Alert(self)
 
     def close(self):
-        return self._request('/', 'DELETE')
+        return self.http.delete('/')
 
     def __call__(self, *args, **kwargs):
         httpclient = self.http.new_client('')
@@ -451,7 +446,7 @@ class Session(object):
 class Alert(object):
     def __init__(self, session):
         self._s = session
-        self._request = session._request
+        self.http = session.http
 
     @property
     def exists(self):
@@ -465,7 +460,7 @@ class Alert(object):
 
     @property
     def text(self):
-        return self._request('/alert/text', 'GET').value
+        return self.http.get('/alert/text').value
 
     def wait(self, timeout=20.0):
         start_time = time.time()
@@ -476,13 +471,13 @@ class Alert(object):
         return False
 
     def accept(self):
-        return self._request('/alert/accept', 'POST')
+        return self.http.post('/alert/accept')
 
     def dismiss(self):
-        return self._request('/alert/dismiss', 'POST')
+        return self.http.post('/alert/dismiss')
 
     def buttons(self):
-        return self._request('/wda/alert/buttons', 'GET').value
+        return self.http.get('/wda/alert/buttons').value
 
     def click(self, button_name):
         """
@@ -490,7 +485,7 @@ class Alert(object):
             - button_name: the name of the button
         """
         # Actually, It has no difference POST to accept or dismiss
-        return self._request('/alert/accept', 'POST', data={"name": button_name})
+        return self.http.post('/alert/accept', data={"name": button_name})
 
 
 class Selector(object):
@@ -702,7 +697,7 @@ class Selector(object):
 
     def __getitem__(self, index):
         selector = self.clone()
-        selector._index = index
+        selector.index = index
         return selector
 
     @property
@@ -710,27 +705,15 @@ class Selector(object):
         return len(self.find_element_ids()) > self.index
 
     def wait(self, timeout=None, raise_error=True):
-        """
+        """ alias of get
         Args:
-            timeout(float): None means 90s
-            raise_error (bool): raise error when no element found
-
-        Returns:
-            Element object
+            timeout (float): timeout seconds
+            raise_error (bool): whether to raise error if element not found
         
         Raises:
             WDAElementNotFoundError
         """
-        start_time = time.time()
-        if timeout is None or timeout <= 0:
-            timeout = self._default_timeout
-        while start_time+timeout > time.time():
-            elems = self.elems()
-            if len(elems) <= self._index:
-                continue
-            return elems[self._index]
-        if raise_error:
-            raise WDAElementNotFoundError("element not found")
+        return self.get(timeout=timeout, raise_error=raise_error)
     
     def wait_gone(self, timeout=None, raise_error=True):
         """
@@ -746,7 +729,7 @@ class Selector(object):
         """
         start_time = time.time()
         if timeout is None or timeout <= 0:
-            timeout = self._default_timeout
+            timeout = self.timeout
         while start_time + timeout > time.time():
             if not self.exists:
                 return True
@@ -754,20 +737,13 @@ class Selector(object):
             return False
         raise WDAElementNotDisappearError("element not gone")       
 
-    def double_tap(self, timeout=None):
-        """
-        [[FBRoute POST:@"/wda/element/:uuid/doubleTap"] respondWithTarget:self action:@selector(handleDoubleTap:)],
-        """
-        element = self.wait(timeout)
-        eid = element['ELEMENT']
-        return self._request("", suburl='wda/element/%s/doubleTap' % eid)
-
     def pinch(self, scale, velocity, timeout=None):
         """
         Args:
             - scale(float): scale must be greater than zero
             - velocity(float): velocity must be less than zero when scale is less than 1
         """
+        raise RuntimeError("Not finished yet")
         element = self.wait(timeout)
         eid = element['ELEMENT']
         data = json.dumps({'scale': scale, 'velocity': velocity})
@@ -797,6 +773,7 @@ class Selector(object):
         // Using presence of arguments as a way to convey control flow seems like a pretty bad idea but it's
         // what ios-driver did and sadly, we must copy them.
         """
+        raise RuntimeError("Not finished yet")
         textContains = None # will raise Coredump of WDA
 
         element = self.wait(timeout)
@@ -812,31 +789,19 @@ class Selector(object):
         self._request(data, suburl='wda/element/{elem_id}/scroll'.format(elem_id=eid))
         return self
 
-    def swipe(self, direction, timeout=None):
-        if direction not in ['up', 'down', 'left', 'right']:
-            raise ValueError
-        element = self.wait(timeout)
-        eid = element['ELEMENT']
-        data = json.dumps({'direction': direction})
-        return self._request(data, suburl='wda/element/%s/swipe' % eid)
+    # def swipe(self, direction, timeout=None):
+    #     if direction not in ['up', 'down', 'left', 'right']:
+    #         raise ValueError
+    #     element = self.wait(timeout)
+    #     eid = element['ELEMENT']
+    #     data = json.dumps({'direction': direction})
+    #     return self._request(data, suburl='wda/element/%s/swipe' % eid)
 
     # todo
     # pinch
     # touchAndHold
     # dragfromtoforduration
     # twoFingerTap
-
-    def set_text(self, text, clear=False):
-        el = self.wait()
-        if clear:
-            el.clear_text()
-        return el.set_text(text)
-
-    def clear_text(self):
-        return self.wait().clear_text()
-
-    def attribute(self, name):
-        return self.wait().attribute(name)
 
     # todo
     # handleGetIsAccessibilityContainer
@@ -918,6 +883,10 @@ class Element(object):
     def tap(self):
         return self._req('post', '/click')
 
+    def click(self):
+        """ Alias of tap """
+        return self.tap()
+
     def tap_hold(self, duration=1.0):
         """
         Tap and hold for a moment
@@ -942,8 +911,8 @@ class Element(object):
         """
         return self._prop('attribute/%s' % name)
 
-    def child(self, **kwargs):
-        return Selector(self.__base_url, self._id, **kwargs)
+    # def child(self, **kwargs):
+    #     return Selector(self.__base_url, self._id, **kwargs)
         
     # todo lot of other operations
     # tap_hold

@@ -329,6 +329,9 @@ List apps with command
 $ ideviceinstaller -l
 ```
 
+## Tests
+测试的用例放在`tests/`目录下，使用iphone SE作为测试机型，系统语言应用。调度框架`pytest`
+
 ## Reference
 Source code
 

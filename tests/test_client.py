@@ -8,6 +8,7 @@ import time
 import xml.etree.ElementTree as ET
 
 import wda
+from pytest import mark
 
 # Note !!!
 # Set env-var DEVICE_URL before run tests
@@ -88,6 +89,7 @@ def test_client_source():
     assert json_data['type'] == 'Application'
 
 
+@mark.skip("hard to test")
 def test_alert():
     """
     Skip: because alert not always happens
@@ -99,14 +101,13 @@ def test_alert():
     #     pass
 
 def test_text_contains():
-    c = wda.Client()
     with c.session('com.apple.Preferences') as s:
-        s(text='WLAN').get()
-        assert s(textContains="WLA").exists
-        assert not s(text="WLA").exists
-        assert s(text="WLAN").exists
+        s(text='Bluetooth').get()
+        assert s(textContains="Blue").exists
+        assert not s(text="Blue").exists
+        assert s(text="Bluetooth").exists
 
-
+@mark.skip("hard to test")
 def test_alert_wait():
     pass
     """ Skip because alert not always happens """
