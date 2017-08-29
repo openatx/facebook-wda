@@ -929,11 +929,12 @@ class Element(object):
         distance=1.0 means, element (width or height) multiply 1.0
         """
         if direction == 'visible':
-            return self._wda_req('post', '/scroll', {'toVisible': True})
+            self._wda_req('post', '/scroll', {'toVisible': True})
         elif direction in ['up', 'down', 'left', 'right']:
-            return self._wda_req('post', '/scroll', {'direction': direction, 'distance': distance})
+            self._wda_req('post', '/scroll', {'direction': direction, 'distance': distance})
         else:
             raise ValueError("Invalid direction")
+        return self
     
     def pinch(self, scale, velocity):
         """
