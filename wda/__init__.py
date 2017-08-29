@@ -474,7 +474,7 @@ class Session(object):
 
     def __call__(self, *args, **kwargs):
         httpclient = self.http.new_client('')
-        return Selector(httpclient, *args, **kwargs)
+        return Selector(httpclient, self, *args, **kwargs)
 
 
 class Alert(object):
@@ -523,7 +523,7 @@ class Alert(object):
 
 
 class Selector(object):
-    def __init__(self, httpclient, #, sub_eid=None, 
+    def __init__(self, httpclient, session,
             predicate=None,
             id=None,
             className=None, type=None,
@@ -592,6 +592,7 @@ class Selector(object):
             wdVisible
         '''
         self.http = httpclient
+        self.session = session
 
         self.predicate = predicate
         self.id = id
@@ -726,6 +727,12 @@ class Selector(object):
             if start_time + timeout < time.time():
                 break
             time.sleep(0.01)
+        
+        # check alert again
+        if self.session.alert.exists and self.http.alert_callback:
+            self.http.alert_callback()
+            return self.get(timeout, raise_error)
+
         if raise_error:
             raise WDAElementNotFoundError("element not found")
 
@@ -746,7 +753,7 @@ class Selector(object):
     def child(self, *args, **kwargs):
         chain = self._gen_class_chain()
         kwargs['parent_class_chains'] = self.parent_class_chains + [chain]
-        return Selector(self.http, *args, **kwargs)
+        return Selector(self.http, self.session, *args, **kwargs)
 
     @property
     def exists(self):
