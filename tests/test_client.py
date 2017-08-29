@@ -100,13 +100,6 @@ def test_alert():
     #     #print s.alert.text
     #     pass
 
-def test_text_contains():
-    with c.session('com.apple.Preferences') as s:
-        s(text='Bluetooth').get()
-        assert s(textContains="Blue").exists
-        assert not s(text="Blue").exists
-        assert s(text="Bluetooth").exists
-
 @mark.skip("hard to test")
 def test_alert_wait():
     pass

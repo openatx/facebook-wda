@@ -615,9 +615,9 @@ class Selector(object):
         if self.class_name and not self.class_name.startswith('XCUIElementType'):
              self.class_name = 'XCUIElementType'+self.class_name
         if self.name_regex:
-            if not self.name_regex.startswith('^'):
+            if not self.name_regex.startswith('^') and not self.name_regex.startswith('.*'):
                 self.name_regex = '.*' + self.name_regex
-            if not self.name_regex.startswith('$'):
+            if not self.name_regex.endswith('$') and not self.name_regex.endswith('.*'):
                 self.name_regex = self.name_regex + '.*'
         self.parent_class_chains = parent_class_chains
     

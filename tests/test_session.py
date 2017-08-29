@@ -106,3 +106,15 @@ def test_session_wait_gone():
     assert not elem.wait_gone(1.0, raise_error=False)
     s.swipe_left()
     assert elem.wait_gone(1.0)
+
+def test_text_contains_matches():
+    with c.session('com.apple.Preferences') as s:
+        s(text='Bluetooth').get()
+        assert s(textContains="Blue").exists
+        assert not s(text="Blue").exists
+        assert s(text="Bluetooth").exists
+        assert s(textMatches="Blue?").exists
+        assert s(nameMatches="Blue?").exists
+        assert not s(textMatches="^lue?").exists
+        assert not s(textMatches="^Blue$").exists
+        assert s(textMatches=r"^(Blue|Red).*").exists
