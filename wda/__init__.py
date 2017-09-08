@@ -268,7 +268,7 @@ class Client(object):
             'shouldWaitForQuiescence': True,
         }
         # Remove empty value to prevent WDAError
-        for k in capabilities.keys():
+        for k in list(capabilities.keys()):
             if capabilities[k] is None:
                 capabilities.pop(k)
 

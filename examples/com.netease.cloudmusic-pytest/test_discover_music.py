@@ -37,7 +37,7 @@ def account_netease_login(s):
 
 
 def alert_callback(session):
-    btns = set([u'不再提醒', 'OK', u'知道了']).intersection(session.alert.buttons())
+    btns = set([u'不再提醒', 'OK', u'知道了', 'Allow']).intersection(session.alert.buttons())
     if len(btns) == 0:
         raise RuntimeError("Alert can not handled, buttons: " + ', '.join(session.alert.buttons()))
     session.alert.click(list(btns)[0])
