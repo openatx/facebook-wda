@@ -597,7 +597,7 @@ class Selector(object):
         self.predicate = predicate
         self.id = id
         self.class_name = className or type
-        self.name = name or text
+        self.name = self._add_escape_character_for_quote_prime_character(name or text)
         self.name_part = nameContains or textContains
         self.name_regex = nameMatches or textMatches
         self.value = value
@@ -626,6 +626,22 @@ class Selector(object):
             return
         re_element = '|'.join(xcui_element_types.ELEMENTS)
         return re.sub(r'/('+re_element+')', '/XCUIElementType\g<1>', s)
+
+    def _add_escape_character_for_quote_prime_character(self, text):
+        """
+        Fix for https://github.com/openatx/facebook-wda/issues/33
+        Returns:
+            string with properly formated quotes, or non changed text
+        """
+        if text is not None:
+          if "'" in text:
+            return text.replace("'","\\'")
+          elif '"' in text:
+            return text.replace('"','\\"')
+          else:
+            return text
+        else:
+            return text
 
     def _wdasearch(self, using, value):
         """
