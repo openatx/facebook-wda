@@ -39,6 +39,16 @@ I found a tools named `iproxy` which can forward device port to localhost, it\'s
 
 The usage is very simple `iproxy <local port> <remote port> [udid]`
 
+## Something you need to know
+function `window_size()` return UIKit size, While `screenshot()` image size is Native Resolution 
+
+[![IOS Display](images/ios-display.png)](https://developer.apple.com/library/archive/documentation/DeviceInformation/Reference/iOSDeviceCompatibility/Displays/Displays.html)
+
+when use `screenshot`, the image size is pixels size. eg(`1080 x 1920`)
+But this size is different with `c.session().window_size()`
+
+use `session.scale` to get UIKit scale factor
+
 ## Configuration
 ```python
 import wda
@@ -115,8 +125,17 @@ s.close()
 # Current bundleId and sessionId
 print s.bundle_id, s.id
 
+# Screenshot return PIL.Image
+# Requires pillow, installed by "pip install pillow"
+s.screenshot().save("s.png")
+
+# Sometimes screenshot rotation is wrong, but we can rotate it to the right direction
+# Refs: https://pillow.readthedocs.io/en/3.1.x/reference/Image.html#PIL.Image.Image.transpose
+from PIL import Image
+s.screenshot().transpose(Image.ROTATE_90).save("correct.png")
+
 # One of <PORTRAIT | LANDSCAPE>
-print s.orientation # expect PORTRAIT
+print(s.orientation) # expect PORTRAIT or LANDSCAPE
 
 # Change orientation
 s.orientation = wda.LANDSCAPE # there are many other directions
@@ -125,12 +144,21 @@ s.orientation = wda.LANDSCAPE # there are many other directions
 s.deactivate(5.0) # 5s
 
 # Get width and height
-print s.window_size()
-# Expect json output
-# For example: {u'height': 736, u'width': 414}
+print(s.window_size())
+# Expect tuple output (width, height)
+# For example: (414, 736)
+
+# Get UIKit scale factor, the first time will take about 1s, next time use cached value
+print(s.scale)
+# Example output: 3
 
 # Simulate touch
 s.tap(200, 200)
+
+# Very like tap, but support float and int argument
+s.click(200, 200)
+s.click(0.5, 0.5) # click center of screen
+s.click(0.5, 200) # click center of x, and y(200)
 
 # Double touch
 s.double_tap(200, 200)

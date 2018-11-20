@@ -10,6 +10,7 @@ import functools
 import json
 import os
 import re
+import io
 import time
 from collections import namedtuple
 
@@ -70,7 +71,7 @@ def httpdo(url, method='GET', data=None):
         response = requests.request(method, url, data=data, timeout=HTTP_TIMEOUT)
     except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
         # retry again
-        print('retry to connect, error: {}'.format(e))
+        # print('retry to connect, error: {}'.format(e))
         time.sleep(1.0)
         response = requests.request(method, url, data=data, timeout=HTTP_TIMEOUT)
 
@@ -279,15 +280,15 @@ class Client(object):
         httpclient = self.http.new_client('session/'+res.sessionId)
         return Session(httpclient, res.sessionId)
 
-    def screenshot(self, png_filename=None):
+    def screenshot(self, png_filename=None, format='raw'):
         """
         Screenshot with PNG format
 
         Args:
             png_filename(string): optional, save file name
-
+            format(string): return format, pillow or raw(default)
         Returns:
-            png raw data
+            raw data or PIL.Image
         
         Raises:
             WDAError
@@ -295,13 +296,21 @@ class Client(object):
         value = self.http.get('screenshot').value
         raw_value = base64.b64decode(value)
         png_header = b"\x89PNG\r\n\x1a\n"
-        if not raw_value.startswith(png_header):
+        if not raw_value.startswith(png_header) and png_filename:
             raise WDAError(-1, "screenshot png format error")
 
         if png_filename:
             with open(png_filename, 'wb') as f:
                 f.write(raw_value)
-        return raw_value
+
+        if format == 'raw':
+            return raw_value
+        elif format == 'pillow':
+            from PIL import Image
+            buff = io.BytesIO(raw_value)
+            return Image.open(buff)
+        else:
+            raise ValueError("unknown format")
 
 
 class Session(object):
@@ -324,6 +333,7 @@ class Session(object):
         v = self.http.get('/').value
         self.capabilities = v['capabilities']
         self._sid = v['sessionId']
+        self.__scale = None
 
     def __str__(self):
         return 'wda.Session (id=%s)' % self._sid
@@ -337,6 +347,20 @@ class Session(object):
     @property
     def id(self):
         return self._sid
+    
+    @property
+    def scale(self):
+        """
+        UIKit scale factor
+        
+        Refs:
+            https://developer.apple.com/library/archive/documentation/DeviceInformation/Reference/iOSDeviceCompatibility/Displays/Displays.html
+        """
+        if self.__scale:
+            return self.__scale
+        v = max(self.screenshot().size) / max(self.window_size())
+        self.__scale = round(v)
+        return self.__scale
 
     @property
     def bundle_id(self):
@@ -380,6 +404,22 @@ class Session(object):
     def tap(self, x, y):
         return self.http.post('/wda/tap/0', dict(x=x, y=y))
 
+    def _percent2pos(self, px, py):
+        w, h = self.window_size()
+        x = int(px*w) if isinstance(px, float) else px
+        y = int(py*h) if isinstance(py, float) else py
+        assert w >= x >= 0
+        assert h >= y >= 0
+        return (x, y)
+            
+    def click(self, x, y):
+        """
+        x, y can be float(percent) or int
+        """
+        if isinstance(x, float) or isinstance(y, float):
+            x, y = self._percent2pos(x, y)
+        return self.tap(x, y)
+
     def double_tap(self, x, y):
         return self.http.post('/wda/doubleTap', dict(x=x, y=y))
 
@@ -395,6 +435,19 @@ class Session(object):
         """
         data = {'x': x, 'y': y, 'duration': duration}
         return self.http.post('/wda/touchAndHold', data=data)
+
+    def screenshot(self):
+        """
+        Take screenshot with session check
+
+        Returns:
+            PIL.Image
+        """
+        b64data = self.http.get('/screenshot').value
+        raw_data = base64.b64decode(b64data)
+        from PIL import Image
+        buff = io.BytesIO(raw_data)
+        return Image.open(buff)
 
     def swipe(self, x1, y1, x2, y2, duration=0):
         """
