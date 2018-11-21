@@ -7,7 +7,6 @@ Facebook WebDriverAgent Python Client Library (not official)
 
 Most functions finished.
 
-Tested with [facebook/WebDriverAgent](https://github.com/facebook/WebDriverAgent/tree/59d5a3473bc88825cbb7ac74e86421b0d2192b52) 2017/08/27
 
 Implemented apis describe in <https://github.com/facebook/WebDriverAgent/wiki/Queries>
 
@@ -25,6 +24,8 @@ This library has been used in project atx <https://github.com/NetEaseGame/Automa
 	```
 	xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination 'platform=iOS Simulator,name=iPhone 6' test
 	```
+
+	WDA在真机上运行需要一些配置，可以参考这篇文章 [ATX 文档 - iOS 真机如何安装 WebDriverAgent](https://testerhome.com/topics/7220)
 
 2. Install python wda client
 
@@ -70,6 +71,9 @@ A `wda.WDAError` will be raised if communite with WDA went wrong.
 ```py
 # Show status
 print c.status()
+
+# Wait WDA ready
+c.wait_ready(timeout=300) # 等待300s，默认120s
 
 # Press home button
 c.home()
