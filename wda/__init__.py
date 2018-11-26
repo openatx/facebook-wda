@@ -194,6 +194,24 @@ class Client(object):
             url = os.environ.get('DEVICE_URL', 'http://localhost:8100')
         self.http = HTTPClient(url)
 
+    def wait_ready(self, timeout=120):
+        """
+        wait until WDA back to normal
+
+        Returns:
+            bool (if wda works)
+        """
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                self.status()
+                return True
+            except:
+                time.sleep(2)
+        return False
+
+            
+
     def status(self):
         res = self.http.get('status')
         sid = res.sessionId
