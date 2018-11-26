@@ -69,16 +69,22 @@ def httpdo(url, method='GET', data=None):
 
     try:
         response = requests.request(method, url, data=data, timeout=HTTP_TIMEOUT)
-    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
+    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
         # retry again
         # print('retry to connect, error: {}'.format(e))
         time.sleep(1.0)
         response = requests.request(method, url, data=data, timeout=HTTP_TIMEOUT)
 
-    retjson = response.json()
     if DEBUG:
         ms = (time.time() - start) * 1000
-        print('Return ({:.0f}ms): {}'.format(ms, json.dumps(retjson, indent=4)))
+        print('Return ({:.0f}ms): {}'.format(ms, response.text))
+
+    try:
+        retjson = response.json()
+    except ValueError as e:
+        # show why json.loads error
+        raise ValueError(e, response.text)
+        
     r = convert(retjson)
     if r.status != 0:
         raise WDAError(r.status, r.value)
