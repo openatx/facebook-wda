@@ -401,7 +401,7 @@ class Session(object):
             def callback(session):
                 session.alert.accept()
         """
-        if callable(callable):
+        if callable(callback):
             self.http.alert_callback = functools.partial(callback, self)
         else:
             self.http.alert_callback = None
