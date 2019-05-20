@@ -4,18 +4,16 @@
 [![PyPI](https://img.shields.io/pypi/l/facebook-wda.svg)]()
 
 Facebook WebDriverAgent Python Client Library (not official)
+Implemented apis describe in <https://github.com/facebook/WebDriverAgent/wiki/Queries>
 
 Most functions finished.
 
-
-Implemented apis describe in <https://github.com/facebook/WebDriverAgent/wiki/Queries>
-
-This library has been used in project atx <https://github.com/NetEaseGame/AutomatorX>
+Since facebook/WebDriverAgent has been archived. Recommend use the forked WDA: https://github.com/appium/WebDriverAgent
 
 ## Installation
 1. You need to start WebDriverAgent by yourself
 
-	Follow the instructions in <https://github.com/facebook/WebDriverAgent>
+	Follow the instructions in <https://github.com/appium/WebDriverAgent>
 
 	It is better to start with Xcode to prevent CodeSign issues.
 
@@ -30,7 +28,7 @@ This library has been used in project atx <https://github.com/NetEaseGame/Automa
 2. Install python wda client
 
 	```
-	pip install --pre facebook-wda
+	pip install -U --pre facebook-wda
 	```
 
 ## TCP connection over USB (optional)
