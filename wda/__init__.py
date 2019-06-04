@@ -62,18 +62,17 @@ def httpdo(url, method='GET', data=None):
     Do HTTP Request
     """
     start = time.time()
-    if isinstance(data, dict):
-        data = json.dumps(data)
     if DEBUG:
-        print("Shell: curl -X {method} -d '{data}' '{url}'".format(method=method.upper(), data=data or '', url=url))
+        body = json.dumps(data)
+        print("Shell: curl -X {method} -d '{body}' '{url}'".format(method=method.upper(), body=body or '', url=url))
 
     try:
-        response = requests.request(method, url, data=data, timeout=HTTP_TIMEOUT)
+        response = requests.request(method, url, json=data, timeout=HTTP_TIMEOUT)
     except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
         # retry again
         # print('retry to connect, error: {}'.format(e))
         time.sleep(1.0)
-        response = requests.request(method, url, data=data, timeout=HTTP_TIMEOUT)
+        response = requests.request(method, url, json=data, timeout=HTTP_TIMEOUT)
 
     if DEBUG:
         ms = (time.time() - start) * 1000
@@ -304,15 +303,15 @@ class Client(object):
         httpclient = self.http.new_client('session/'+res.sessionId)
         return Session(httpclient, res.sessionId)
 
-    def screenshot(self, png_filename=None, format='raw'):
+    def screenshot(self, png_filename=None, format='pillow'):
         """
         Screenshot with PNG format
 
         Args:
             png_filename(string): optional, save file name
-            format(string): return format, pillow or raw(default)
+            format(string): return format, "raw" or "pillow” (default)
         Returns:
-            raw data or PIL.Image
+            PIL.Image or raw png data
         
         Raises:
             WDAError

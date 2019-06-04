@@ -25,10 +25,23 @@ Since facebook/WebDriverAgent has been archived. Recommend use the forked WDA: h
 
 	WDA在真机上运行需要一些配置，可以参考这篇文章 [ATX 文档 - iOS 真机如何安装 WebDriverAgent](https://testerhome.com/topics/7220)
 
+	配置完之后运行下面的命令即可（需要用到Mac的密码，以及设备的UDID）
+	
+	```bash
+	# 解锁keychain，以便可以正常的签名应用
+	security unlock-keychain -p $your-mac-password-here ~/Library/Keychains/login.keychain
+
+	# 获取设备的UDID
+	UDID=$(idevice_id -l | head -n1)
+
+	# 运行测试
+	xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination "id=$UDID" test
+	```
+
 2. Install python wda client
 
 	```
-	pip install -U --pre facebook-wda
+	pip install -U facebook-wda
 	```
 
 ## TCP connection over USB (optional)
@@ -94,10 +107,14 @@ c.source() # format XML
 c.source(accessible=True) # default false, format JSON
 ```
 
-Take screenshot, only can save format png
+Take screenshot save as png
 
 ```py
-c.screenshot('screen.png')
+c.screenshot('screen.png') # Good
+c.screenshot("screen.jpg") # Bad
+
+# convert to PIL.Image and then save as jpg
+c.screenshot().save("screen.jpg") # Good
 ```
 
 Open app
