@@ -296,9 +296,9 @@ class Client(object):
             if capabilities[k] is None:
                 capabilities.pop(k)
 
-        data = json.dumps({
+        data = {
             'desiredCapabilities': capabilities
-        })
+        }
         res = self.http.post('session', data)
         httpclient = self.http.new_client('session/'+res.sessionId)
         return Session(httpclient, res.sessionId)
