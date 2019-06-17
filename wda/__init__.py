@@ -35,6 +35,26 @@ PORTRAIT_UPSIDEDOWN = 'UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN'
 alert_callback = None
 
 
+class WDAError(Exception):
+    def __init__(self, status, value):
+        self.status = status
+        self.value = value
+
+    def __str__(self):
+        return 'WDAError(status=%d, value=%s)' % (self.status, self.value)
+
+
+class WDARequestError(Exception):
+    pass
+
+
+class WDAElementNotFoundError(Exception):
+    pass
+
+class WDAElementNotDisappearError(Exception):
+    pass
+
+
 def convert(dictionary):
     """
     Convert dict to namedtuple
@@ -80,6 +100,8 @@ def httpdo(url, method='GET', data=None):
 
     try:
         retjson = response.json()
+    except json.decoder.JSONDecodeError:
+        raise WDARequestError(url, method, response.text)
     except ValueError as e:
         # show why json.loads error
         raise ValueError(e, response.text)
@@ -124,22 +146,6 @@ class HTTPClient(object):
     def __getattr__(self, key):
         """ Handle GET,POST,DELETE, etc ... """
         return functools.partial(self.fetch, key)
-
-
-class WDAError(Exception):
-    def __init__(self, status, value):
-        self.status = status
-        self.value = value
-
-    def __str__(self):
-        return 'WDAError(status=%d, value=%s)' % (self.status, self.value)
-
-
-class WDAElementNotFoundError(Exception):
-    pass
-
-class WDAElementNotDisappearError(Exception):
-    pass
 
 
 class Rect(object):
