@@ -1,21 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
 import base64
 import copy
 import functools
+import io
 import json
 import os
 import re
-import io
 import time
 from collections import namedtuple
 
 import requests
+import retry
 import six
+
 from . import xcui_element_types
 
 if six.PY3:
@@ -212,6 +213,7 @@ class Client(object):
                 time.sleep(2)
         return False
 
+    @retry.retry(exceptions=WDAEmptyResponseError, tries=3, delay=2)
     def status(self):
         res = self.http.get('status')
         sid = res.sessionId
