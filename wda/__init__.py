@@ -36,6 +36,8 @@ PORTRAIT_UPSIDEDOWN = 'UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN'
 alert_callback = None
 
 
+JSONDecodeError = json.decoder.JSONDecodeError if hasattr(json.decoder, "JSONDecodeError") else ValueError
+
 class WDAError(Exception):
     """ base wda error """
 
@@ -104,7 +106,7 @@ def httpdo(url, method='GET', data=None):
         if r.status != 0:
             raise WDARequestError(r.status, r.value)
         return r
-    except (ValueError, json.decoder.JSONDecodeError):
+    except JSONDecodeError:
         if response.text == "":
             raise WDAEmptyResponseError(method, url, data)
         raise WDARequestError(method, url, response.text)
