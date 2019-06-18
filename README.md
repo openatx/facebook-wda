@@ -121,28 +121,47 @@ Open app
 
 ```py
 with c.session('com.apple.Health') as s:
-	print s.orientation
+	print(s.orientation)
 ```
 
 Same as
 
 ```py
 s = c.session('com.apple.Health')
-print s.orientation
+print(s.orientation)
 s.close()
 ```
 
 For web browser like Safari you can define page whit which will be opened:
 ```python
 s = c.session('com.apple.mobilesafari', ['-u', 'https://www.google.com/ncr'])
-print s.orientation
+print(s.orientation)
 s.close()
+```
+
+Other app operation (Works in [appium/WebDriverAgent](https://github.com/appium/WebDriverAgent))
+
+```bash
+# Handle alert automatically in WDA (never tested before)
+# alert_action should be one of ["accept", "dismiss"]
+s = c.session("com.apple.Health", alert_action="accept")
+
+# launch without terminate app (WDAEmptyResponseError might raise)
+c.session().app_activate("com.apple.Health")
+
+# terminate app
+c.session().app_terminate("com.apple.Health")
+
+# get app state
+c.session().app_state("com.apple.Health")
+# output {"value": 4, "sessionId": "xxxxxx"}
+# different value means 1: die, 2: background, 4: running
 ```
 
 ### Session operations
 ```python
 # Current bundleId and sessionId
-print s.bundle_id, s.id
+print(s.bundle_id, s.id)
 
 # Screenshot return PIL.Image
 # Requires pillow, installed by "pip install pillow"
@@ -274,7 +293,7 @@ Other Element operations
 
 ```python
 # Check if elements exists
-print s(text="Dashboard").exists
+print(s(text="Dashboard").exists)
 
 # Find all matches elements, return Array of Element object
 s(text='Dashboard').find_elements()
@@ -335,8 +354,8 @@ rect.x # expect 144
 Alert
 
 ```python
-print s.alert.exists
-print s.alert.text
+print(s.alert.exists)
+print(s.alert.text)
 s.alert.accept() # Actually do click first alert button
 s.alert.dismiss() # Actually do click second alert button
 s.alert.wait(5) # if alert apper in 5 second it will return True,else return False (default 20.0)

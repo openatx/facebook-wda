@@ -36,23 +36,25 @@ alert_callback = None
 
 
 class WDAError(Exception):
+    """ base wda error """
+
+class WDARequestError(WDAError):
     def __init__(self, status, value):
         self.status = status
         self.value = value
 
     def __str__(self):
-        return 'WDAError(status=%d, value=%s)' % (self.status, self.value)
+        return 'WDARequestError(status=%d, value=%s)' % (self.status, self.value)
 
 
-class WDARequestError(Exception):
-    pass
+class WDAEmptyResponseError(WDAError):
+    """ response body is empty """
 
+class WDAElementNotFoundError(WDAError):
+    """ element not found """
 
-class WDAElementNotFoundError(Exception):
-    pass
-
-class WDAElementNotDisappearError(Exception):
-    pass
+class WDAElementNotDisappearError(WDAError):
+    """ element not disappera """
 
 
 def convert(dictionary):
@@ -88,11 +90,8 @@ def httpdo(url, method='GET', data=None):
 
     try:
         response = requests.request(method, url, json=data, timeout=HTTP_TIMEOUT)
-    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
-        # retry again
-        # print('retry to connect, error: {}'.format(e))
-        time.sleep(1.0)
-        response = requests.request(method, url, json=data, timeout=HTTP_TIMEOUT)
+    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
+        raise
 
     if DEBUG:
         ms = (time.time() - start) * 1000
@@ -100,17 +99,15 @@ def httpdo(url, method='GET', data=None):
 
     try:
         retjson = response.json()
-    except json.decoder.JSONDecodeError:
-        raise WDARequestError(url, method, response.text)
-    except ValueError as e:
-        # show why json.loads error
-        raise ValueError(e, response.text)
+        r = convert(retjson)
+        if r.status != 0:
+            raise WDARequestError(r.status, r.value)
+        return r
+    except (ValueError, json.decoder.JSONDecodeError):
+        if response.text == "":
+            raise WDAEmptyResponseError(method, url, data)
+        raise WDARequestError(method, url, response.text)
         
-    r = convert(retjson)
-    if r.status != 0:
-        raise WDAError(r.status, r.value)
-    return r
-
 
 class HTTPClient(object):
     def __init__(self, address, alert_callback=None):
@@ -133,7 +130,7 @@ class HTTPClient(object):
         target_url = urljoin(self.address, url)
         try:
             return httpdo(target_url, method, data)
-        except WDAError as err:
+        except WDARequestError as err:
             if depth >= 10:
                 raise
             if err.status != 26:
@@ -215,8 +212,6 @@ class Client(object):
                 time.sleep(2)
         return False
 
-            
-
     def status(self):
         res = self.http.get('status')
         sid = res.sessionId
@@ -241,12 +236,13 @@ class Client(object):
             return self.http.get('/wda/accessibleSource').value
         return self.http.get('source?format='+format).value
 
-    def session(self, bundle_id=None, arguments=None, environment=None):
+    def session(self, bundle_id=None, arguments=None, environment=None, alert_action=None):
         """
         Args:
             - bundle_id (str): the app bundle id
             - arguments (list): ['-u', 'https://www.google.com/ncr']
             - enviroment (dict): {"KEY": "VAL"}
+            - alert_action (str): "accept" or "dismiss"
 
         WDA Return json like
 
@@ -297,15 +293,27 @@ class Client(object):
             'environment': environment,
             'shouldWaitForQuiescence': True,
         }
-        # Remove empty value to prevent WDAError
+        # Remove empty value to prevent WDARequestError
         for k in list(capabilities.keys()):
             if capabilities[k] is None:
                 capabilities.pop(k)
+        
+        if alert_action:
+            assert alert_action in ["accept", "dismiss"]
+            capabilities["defaultAlertAction"] = alert_action
 
         data = {
             'desiredCapabilities': capabilities
         }
-        res = self.http.post('session', data)
+        try:
+            res = self.http.post('session', data)
+        except WDAEmptyResponseError:
+            """ when there is alert, might be got empty response
+            use /wda/apps/state may still get sessionId
+            """
+            res = self.session().app_state(bundle_id)
+            if res.value != 4:
+                raise
         httpclient = self.http.new_client('session/'+res.sessionId)
         return Session(httpclient, res.sessionId)
 
@@ -320,13 +328,13 @@ class Client(object):
             PIL.Image or raw png data
         
         Raises:
-            WDAError
+            WDARequestError
         """
         value = self.http.get('screenshot').value
         raw_value = base64.b64decode(value)
         png_header = b"\x89PNG\r\n\x1a\n"
         if not raw_value.startswith(png_header) and png_filename:
-            raise WDAError(-1, "screenshot png format error")
+            raise WDARequestError(-1, "screenshot png format error")
 
         if png_filename:
             with open(png_filename, 'wb') as f:
@@ -411,6 +419,48 @@ class Session(object):
         else:
             self.http.alert_callback = None
 
+    def app_launch(self, bundle_id, arguments=[], environment={}, wait_for_quiescence=False):
+        """
+        Args:
+            - bundle_id (str): the app bundle id
+            - arguments (list): ['-u', 'https://www.google.com/ncr']
+            - enviroment (dict): {"KEY": "VAL"}
+            - wait_for_quiescence (bool): default False
+        """
+        assert isinstance(arguments, (tuple, list))
+        assert isinstance(environment, dict)
+
+        return self.http.post("/wda/apps/launch", {
+            "bundleId": bundle_id,
+            "arguments": arguments,
+            "environment": environment,
+            "shouldWaitForQuiescence": wait_for_quiescence,
+        })
+    
+    def app_activate(self, bundle_id):
+        return self.http.post("/wda/apps/launch", {
+            "bundleId": bundle_id,
+        })
+    
+    def app_terminate(self, bundle_id):
+        return self.http.post("/wda/apps/terminate", {
+            "bundleId": bundle_id,
+        })
+    
+    def app_state(self, bundle_id):
+        """
+        Returns example:
+            {
+                "value": 4,
+                "sessionId": "0363BDC5-4335-47ED-A54E-F7CCB65C6A65"
+            }
+        
+        value 1(not running) 2(running in background) 3(running in foreground)
+        """
+        return self.http.post("/wda/apps/state", {
+            "bundleId": bundle_id,
+        })
+
     def open_url(self, url):
         """
         TODO: Never successed using before.
@@ -419,7 +469,7 @@ class Session(object):
             url (str): url
         
         Raises:
-            WDAError
+            WDARequestError
         """
         return self.http.post('url', {'url': url})
 
@@ -568,7 +618,7 @@ class Alert(object):
     def exists(self):
         try:
             self.text
-        except WDAError as e:
+        except WDARequestError as e:
             if e.status != 27:
                 raise
             return False
