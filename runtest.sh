@@ -7,5 +7,7 @@ then
 	exit 0
 fi
 
-export PYTHONPATH=$PWD:$PYTHONPATH
-python tests/test_client.py
+# export PYTHONPATH=$PWD:$PYTHONPATH
+# python tests/test_client.py
+cd tests
+py.test -vv test_client.py test_common.py "$@"

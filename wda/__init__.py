@@ -88,7 +88,7 @@ def httpdo(url, method='GET', data=None):
     """
     start = time.time()
     if DEBUG:
-        body = json.dumps(data)
+        body = json.dumps(data) if data else ''
         print("Shell: curl -X {method} -d '{body}' '{url}'".format(method=method.upper(), body=body or '', url=url))
 
     try:
@@ -240,6 +240,38 @@ class Client(object):
             return self.http.get('/wda/accessibleSource').value
         return self.http.get('source?format='+format).value
 
+    def screenshot(self, png_filename=None, format='pillow'):
+        """
+        Screenshot with PNG format
+
+        Args:
+            png_filename(string): optional, save file name
+            format(string): return format, "raw" or "pillow” (default)
+        Returns:
+            PIL.Image or raw png data
+        
+        Raises:
+            WDARequestError
+        """
+        value = self.http.get('screenshot').value
+        raw_value = base64.b64decode(value)
+        png_header = b"\x89PNG\r\n\x1a\n"
+        if not raw_value.startswith(png_header) and png_filename:
+            raise WDARequestError(-1, "screenshot png format error")
+
+        if png_filename:
+            with open(png_filename, 'wb') as f:
+                f.write(raw_value)
+
+        if format == 'raw':
+            return raw_value
+        elif format == 'pillow':
+            from PIL import Image
+            buff = io.BytesIO(raw_value)
+            return Image.open(buff)
+        else:
+            raise ValueError("unknown format")
+
     def session(self, bundle_id=None, arguments=None, environment=None, alert_action=None):
         """
         Args:
@@ -321,38 +353,6 @@ class Client(object):
         httpclient = self.http.new_client('session/'+res.sessionId)
         return Session(httpclient, res.sessionId)
 
-    def screenshot(self, png_filename=None, format='pillow'):
-        """
-        Screenshot with PNG format
-
-        Args:
-            png_filename(string): optional, save file name
-            format(string): return format, "raw" or "pillow” (default)
-        Returns:
-            PIL.Image or raw png data
-        
-        Raises:
-            WDARequestError
-        """
-        value = self.http.get('screenshot').value
-        raw_value = base64.b64decode(value)
-        png_header = b"\x89PNG\r\n\x1a\n"
-        if not raw_value.startswith(png_header) and png_filename:
-            raise WDARequestError(-1, "screenshot png format error")
-
-        if png_filename:
-            with open(png_filename, 'wb') as f:
-                f.write(raw_value)
-
-        if format == 'raw':
-            return raw_value
-        elif format == 'pillow':
-            from PIL import Image
-            buff = io.BytesIO(raw_value)
-            return Image.open(buff)
-        else:
-            raise ValueError("unknown format")
-
 
 class Session(object):
     def __init__(self, httpclient, session_id):
@@ -360,9 +360,12 @@ class Session(object):
         Args:
             - target(string): for example, http://127.0.0.1:8100
             - session_id(string): wda session id
+            - timeout (seconds): for element get timeout
         """
         self.http = httpclient
         self._target = None
+        self._timeout = 30.0 # default elment search timeout, change through implicitly_wait(.)
+
         # self._sid = session_id
         # Example session value
         # "capabilities": {
@@ -402,6 +405,13 @@ class Session(object):
         v = max(self.screenshot().size) / max(self.window_size())
         self.__scale = round(v)
         return self.__scale
+
+    def implicitly_wait(self, seconds):
+        """
+        set default element search timeout
+        """
+        assert isinstance(seconds, (int, float))
+        self._timeout = seconds
 
     @property
     def bundle_id(self):
@@ -487,23 +497,24 @@ class Session(object):
     def tap(self, x, y):
         return self.http.post('/wda/tap/0', dict(x=x, y=y))
 
-    def _percent2pos(self, px, py):
-        w, h = self.window_size()
-        x = int(px*w) if isinstance(px, float) else px
-        y = int(py*h) if isinstance(py, float) else py
-        assert w >= x >= 0
-        assert h >= y >= 0
+    def _percent2pos(self, x, y, window_size=None):
+        if any(isinstance(v, float) for v in [px, py]):
+            w, h = window_size or self.window_size()
+            x = int(x*w) if isinstance(x, float) else x
+            y = int(y*h) if isinstance(y, float) else y
+            assert w >= x >= 0
+            assert h >= y >= 0
         return (x, y)
             
     def click(self, x, y):
         """
         x, y can be float(percent) or int
         """
-        if isinstance(x, float) or isinstance(y, float):
-            x, y = self._percent2pos(x, y)
+        x, y = self._percent2pos(x, y)
         return self.tap(x, y)
 
     def double_tap(self, x, y):
+        x, y = self._percent2pos(x, y)
         return self.http.post('/wda/doubleTap', dict(x=x, y=y))
 
     def tap_hold(self, x, y, duration=1.0):
@@ -511,11 +522,12 @@ class Session(object):
         Tap and hold for a moment
 
         Args:
-            - x, y(int): position
+            - x, y(int, float): float(percent) or int(absolute coordicate)
             - duration(float): seconds of hold time
 
         [[FBRoute POST:@"/wda/touchAndHold"] respondWithTarget:self action:@selector(handleTouchAndHoldCoordinate:)],
         """
+        x, y = self._percent2pos(x, y)
         data = {'x': x, 'y': y, 'duration': duration}
         return self.http.post('/wda/touchAndHold', data=data)
 
@@ -535,10 +547,16 @@ class Session(object):
     def swipe(self, x1, y1, x2, y2, duration=0):
         """
         Args:
+            x1, y1, x2, y2 (int, float): float(percent), int(coordicate)
             duration (float): start coordinate press duration (seconds)
 
         [[FBRoute POST:@"/wda/dragfromtoforduration"] respondWithTarget:self action:@selector(handleDragCoordinate:)],
         """
+        if any(isinstance(v, float) for v in [x1, y1, x2, y2]):
+            size = self.window_size()
+            x1, y1 = self._percent2pos(x1, y1, size)
+            x2, y2 = self._percent2pos(x2, y2, size)
+            
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
         return self.http.post('/wda/dragfromtoforduration', data=data)
 
@@ -609,6 +627,8 @@ class Session(object):
         return self.http.delete('/')
 
     def __call__(self, *args, **kwargs):
+        if 'timeout' not in kwargs:
+            kwargs['timeout'] = self._timeout
         httpclient = self.http.new_client('')
         return Selector(httpclient, self, *args, **kwargs)
 
@@ -886,7 +906,7 @@ class Selector(object):
             return self.get(timeout, raise_error)
 
         if raise_error:
-            raise WDAElementNotFoundError("element not found")
+            raise WDAElementNotFoundError("element not found", "timeout %.1f" % timeout)
 
     def __getattr__(self, oper):
         return getattr(self.get(), oper)

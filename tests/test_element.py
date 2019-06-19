@@ -5,13 +5,8 @@ import time
 import wda
 from pytest import mark
 
-c = wda.Client()
-
-def setup_function():
-    c.home()
-
-
-def test_element_properties():
+@mark.skip("Require English")
+def test_element_properties(c: wda.Client):
     with c.session('com.apple.mobilesafari', ['-u', 'https://www.github.com']) as s:
         time.sleep(1.0)
         u = None
@@ -30,18 +25,21 @@ def test_element_properties():
         assert 'status' in u.value
 
 
-def test_element_tap_hold():
+@mark.skip("Require English")
+def test_element_tap_hold(c: wda.Client):
     s = c.session()
     s(name='Settings').tap_hold(2.0)
     assert s(classChain='**/Icon[`name == "Weather"`]/Button[`name == "DeleteButton"`]').get(2.0, raise_error=False)
 
 
-def test_element_name_matches():
-    s = c.session()
+@mark.skip("Require English")
+def test_element_name_matches(c: wda.Client):
+    s = c.session("com.apple.Preferences")
     assert s(nameMatches='^S.ttings?').exists
 
 
-def test_element_scroll_visible():
+@mark.skip("Require English")
+def test_element_scroll_visible(c: wda.Client):
     with c.session('com.apple.Preferences') as s:
         general = s(name='General')
         assert not general.get().visible
@@ -51,12 +49,12 @@ def test_element_scroll_visible():
 
 
 @mark.skip("using frequency is low")
-def test_element_scroll_direction():
+def test_element_scroll_direction(c: wda.Client):
     with c.session('com.apple.Preferences') as s:
         s(className='Table').scroll('up', 0.1)
 
 @mark.skip("using frequency is low")
-def test_element_pinch():
+def test_element_pinch(c: wda.Client):
     with c.session('com.apple.Maps') as s:
         def alert_callback(s):
             s.alert.accept()

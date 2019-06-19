@@ -160,6 +160,9 @@ c.session().app_state("com.apple.Health")
 
 ### Session operations
 ```python
+# set default element search timeout 30 seconds
+s.implicitly_wait(30.0)
+
 # Current bundleId and sessionId
 print(s.bundle_id, s.id)
 
@@ -194,6 +197,7 @@ print(s.scale)
 s.tap(200, 200)
 
 # Very like tap, but support float and int argument
+# float indicate percent. eg 0.5 means 50%
 s.click(200, 200)
 s.click(0.5, 0.5) # click center of screen
 s.click(0.5, 200) # click center of x, and y(200)
@@ -203,12 +207,14 @@ s.double_tap(200, 200)
 
 # Simulate swipe, utilizing drag api
 s.swipe(x1, y1, x2, y2, 0.5) # 0.5s
+s.swipe(0.5, 0.5, 0.5, 1.0)  # swipe middle to bottom
+
 s.swipe_left()
 s.swipe_right()
 s.swipe_up()
 s.swipe_down()
 
-# tap hold
+# tap hold for 1 seconds
 s.tap_hold(x, y, 1.0)
 
 # Hide keyboard (not working in simulator), did not success using latest WDA
@@ -391,6 +397,9 @@ s.set_alert_callback(_alert_callback)
 # do operations, when alert popup, it will auto accept
 s(type="Button").click()
 ```	
+
+## DEVELOP
+See [DEVELOP.md](DEVELOP.md) for more details.
 
 ## iOS Build-in Apps
 **苹果自带应用**
