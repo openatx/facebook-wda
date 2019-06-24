@@ -498,7 +498,7 @@ class Session(object):
         return self.http.post('/wda/tap/0', dict(x=x, y=y))
 
     def _percent2pos(self, x, y, window_size=None):
-        if any(isinstance(v, float) for v in [px, py]):
+        if any(isinstance(v, float) for v in [x, y]):
             w, h = window_size or self.window_size()
             x = int(x*w) if isinstance(x, float) else x
             y = int(y*h) if isinstance(y, float) else y
