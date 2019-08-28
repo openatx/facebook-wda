@@ -114,6 +114,7 @@ def httpdo(url, method='GET', data=None):
 
     try:
         retjson = response.json()
+        retjson['status'] = retjson.get('status', 0)
         r = convert(retjson)
         if r.status != 0:
             raise WDARequestError(r.status, r.value)
@@ -358,7 +359,12 @@ class Client(object):
             assert alert_action in ["accept", "dismiss"]
             capabilities["defaultAlertAction"] = alert_action
 
-        data = {'desiredCapabilities': capabilities}
+        data = {
+            'desiredCapabilities': capabilities, # For old WDA
+            "capabilities": {
+                "alwaysMatch": capabilities, # For recent WDA 2019/08/28
+            }
+        }
         try:
             res = self.http.post('session', data)
         except WDAEmptyResponseError:
