@@ -209,10 +209,12 @@ class Client(object):
         Args:
             target (string): the device url
         
-        If target is None, device url will set to env-var "DEVICE_URL" if defined else set to "http://localhost:8100"
+        If target is empty, device url will set to env-var "DEVICE_URL" if defined else set to "http://localhost:8100"
         """
-        if url is None:
+        if not url:
             url = os.environ.get('DEVICE_URL', 'http://localhost:8100')
+        assert re.match(r"^https?://", url), "Invalid URL: %r" % url
+
         self.http = HTTPClient(url)
 
     def wait_ready(self, timeout=120):
