@@ -350,7 +350,7 @@ class Client(object):
             'bundleId': bundle_id,
             'arguments': arguments,
             'environment': environment,
-            'shouldWaitForQuiescence': True,
+            'shouldWaitForQuiescence': False, # In the latest appium/wda, set this to True will stuck
         }
         # Remove empty value to prevent WDARequestError
         for k in list(capabilities.keys()):
