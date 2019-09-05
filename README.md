@@ -248,6 +248,10 @@ More powerful findding method
 
 ```python
 s(xpath='//Button[@name="URL"]')
+
+# another code style
+s.xpath('//Button[@name="URL"]')
+
 s(classChain='**/Button[`name == "URL"`]')
 s(predicate='name LIKE "UR*"')
 s('name LIKE "U*L"') # predicate is the first argument, without predicate= is ok

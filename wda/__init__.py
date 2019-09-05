@@ -667,6 +667,13 @@ class Session(object):
         raise RuntimeError("not pass tests, this method is not allowed to use")
         self.http.post('/wda/keyboard/dismiss')
 
+    def xpath(self, value):
+        """
+        For weditor, d.xpath(...)
+        """
+        httpclient = self.http.new_client('')
+        return Selector(httpclient, self, xpath=value)
+
     @property
     def alert(self):
         return Alert(self)
