@@ -11,7 +11,9 @@ import json
 import os
 import re
 import time
-from collections import namedtuple
+import threading
+from collections import namedtuple, defaultdict
+from urllib.parse import urlparse
 
 import requests
 import retry
@@ -89,7 +91,22 @@ def roundint(i):
     return int(round(i, 0))
 
 
-def httpdo(url, method='GET', data=None):
+def namedlock(name: str) -> threading.Lock:
+    if not hasattr(namedlock, 'locks'):
+        namedlock.locks = defaultdict(threading.Lock)
+    return namedlock.locks[name]
+
+
+def httpdo(url, method="GET", data=None):
+    """
+    thread safe http request
+    """
+    p = urlparse(url)
+    with namedlock(p.scheme+"://"+p.netloc):
+        return _unsafe_httpdo(url, method, data)
+
+
+def _unsafe_httpdo(url, method='GET', data=None):
     """
     Do HTTP Request
     """
