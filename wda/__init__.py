@@ -265,6 +265,27 @@ class Client(object):
         """Hit healthcheck"""
         return self.http.get('/wda/healthcheck')
 
+    def locked(self):
+        """ returns locked status, true or false """
+        return self.http.get("/wda/locked").value
+
+    def lock(self):
+        return self.http.post('/wda/lock')
+
+    def unlock(self):
+        """ unlock screen, double press home """
+        return self.http.post('/wda/unlock')
+
+    def app_current(self):
+        """
+        Returns:
+            dict, eg:
+            {"pid": 1281,
+             "name": "",
+             "bundleId": "com.netease.cloudmusic"}
+        """
+        return self.http.get("/wda/activeAppInfo").value
+
     def source(self, format='xml', accessible=False):
         """
         Args:
@@ -442,6 +463,8 @@ class Session(object):
         
         Refs:
             https://developer.apple.com/library/archive/documentation/DeviceInformation/Reference/iOSDeviceCompatibility/Displays/Displays.html
+        There is another way to get scale
+            self.http.get("/wda/screen").value returns {"statusBarSize": {'width': 320, 'height': 20}, 'scale': 2}
         """
         if self.__scale:
             return self.__scale
@@ -460,6 +483,57 @@ class Session(object):
     def bundle_id(self):
         """ the session matched bundle id """
         return self.capabilities.get('CFBundleIdentifier')
+
+    def locked(self):
+        """ returns locked status, true or false """
+        return self.http.get("/wda/locked").value
+
+    def lock(self):
+        return self.http.post('/wda/lock')
+
+    def unlock(self):
+        """ unlock screen, double press home """
+        return self.http.post('/wda/unlock')
+
+    def battery_info(self):
+        """
+        Returns dict: (I do not known what it means)
+            eg: {"level": 1, "state": 2}
+        """
+        return self.http.get("/wda/batteryInfo").value
+
+    def device_info(self):
+        """
+        Returns dict:
+            eg: {'currentLocale': 'zh_CN', 'timeZone': 'Asia/Shanghai'}
+        """
+        return self.http.get("/wda/device/info").value
+
+    def app_current(self):
+        """
+        Returns:
+            dict, eg:
+            {"pid": 1281,
+             "name": "",
+             "bundleId": "com.netease.cloudmusic"}
+        """
+        return self.http.get("/wda/activeAppInfo").value
+
+    def set_clipboard(self, content, content_type="plaintext"):
+        """ set clipboard """
+        self.http.post("/wda/setPasteboard", {
+            "content": base64.b64encode(content.encode()).decode(),
+            "contentType": content_type
+        })
+
+    #Not working
+    #def get_clipboard(self):
+    #   self.http.post("/wda/getPasteboard").value
+
+
+    # Not working
+    #def siri_activate(self, text):
+    #    self.http.post("/wda/siri/activate", {"text": text})
 
     def set_alert_callback(self, callback):
         """

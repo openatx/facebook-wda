@@ -105,6 +105,11 @@ c.healthcheck()
 # Get page source
 c.source() # format XML
 c.source(accessible=True) # default false, format JSON
+
+c.locked() # true of false
+c.lock() # lock screen
+c.unlock() # unlock
+c.app_current() # {"pid": 1281, "bundleId": "com.netease.cloudmusic"}
 ```
 
 Take screenshot save as png
@@ -117,6 +122,7 @@ c.screenshot("screen.jpg") # Bad
 c.screenshot().save("screen.jpg") # Good
 ```
 
+### Session
 Open app
 
 ```py
