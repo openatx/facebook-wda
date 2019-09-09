@@ -172,6 +172,20 @@ s.implicitly_wait(30.0)
 # Current bundleId and sessionId
 print(s.bundle_id, s.id)
 
+s.lock() # lock screen
+s.unlock() # unlock screen
+s.locked() # locked status, true or false
+
+s.battery_info() # return like {"level": 1, "state": 2}
+s.device_info() # return like {"currentLocale": "zh_CN", "timeZone": "Asia/Shanghai"}
+
+s.app_current() # current app info
+# return example
+# {"pid": 1281, "name": "", "bundleId": "com.netease.cloudmusic"}
+
+s.set_clipboard("Hello world") # update clipboard
+# s.get_clipboard() # Not working now
+
 # Screenshot return PIL.Image
 # Requires pillow, installed by "pip install pillow"
 s.screenshot().save("s.png")
