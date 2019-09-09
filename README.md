@@ -272,10 +272,12 @@ s(xpath='//Button[@name="URL"]')
 # another code style
 s.xpath('//Button[@name="URL"]')
 
-s(classChain='**/Button[`name == "URL"`]')
 s(predicate='name LIKE "UR*"')
 s('name LIKE "U*L"') # predicate is the first argument, without predicate= is ok
+s(classChain='**/Button[`name == "URL"`]')
 ```
+
+To see more `Class Chain Queries` examples, view <https://github.com/facebookarchive/WebDriverAgent/wiki/Class-Chain-Queries-Construction-Rules>
 
 ### Element operations (eg: `tap`, `scroll`, `set_text` etc...)
 Exmaple search element and tap
