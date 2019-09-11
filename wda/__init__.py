@@ -10,22 +10,22 @@ import io
 import json
 import os
 import re
-import time
 import threading
-from collections import namedtuple, defaultdict
-from urllib.parse import urlparse
+import time
+from collections import defaultdict, namedtuple
 
 import requests
 import retry
 import six
+from six.moves import urllib
 
 from . import xcui_element_types
 
+urlparse = urllib.parse.urlparse
+_urljoin = urllib.parse.urljoin
+
 if six.PY3:
-    from urllib.parse import urljoin as _urljoin
     from functools import reduce
-else:
-    from urlparse import urljoin as _urljoin
 
 DEBUG = False
 HTTP_TIMEOUT = 60.0  # unit second
@@ -91,7 +91,11 @@ def roundint(i):
     return int(round(i, 0))
 
 
-def namedlock(name: str) -> threading.Lock:
+def namedlock(name):
+    """
+    Returns:
+        threading.Lock
+    """
     if not hasattr(namedlock, 'locks'):
         namedlock.locks = defaultdict(threading.Lock)
     return namedlock.locks[name]
