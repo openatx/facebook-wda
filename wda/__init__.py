@@ -688,19 +688,19 @@ class Session(object):
 
     def swipe_left(self):
         w, h = self.window_size()
-        return self.swipe(w, h / 2, 0, h / 2)
+        return self.swipe(w, h // 2, 0, h // 2)
 
     def swipe_right(self):
         w, h = self.window_size()
-        return self.swipe(0, h / 2, w, h / 2)
+        return self.swipe(0, h // 2, w, h // 2)
 
     def swipe_up(self):
         w, h = self.window_size()
-        return self.swipe(w / 2, h, w / 2, 0)
+        return self.swipe(w // 2, h, w // 2, 0)
 
     def swipe_down(self):
         w, h = self.window_size()
-        return self.swipe(w / 2, 0, w / 2, h)
+        return self.swipe(w // 2, 0, w // 2, h)
 
     @property
     def orientation(self):
