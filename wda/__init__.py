@@ -106,7 +106,7 @@ def httpdo(url, method="GET", data=None):
     thread safe http request
     """
     p = urlparse(url)
-    with namedlock(p.scheme+"://"+p.netloc):
+    with namedlock(p.scheme + "://" + p.netloc):
         return _unsafe_httpdo(url, method, data)
 
 
@@ -392,7 +392,8 @@ class Client(object):
             'bundleId': bundle_id,
             'arguments': arguments,
             'environment': environment,
-            'shouldWaitForQuiescence': False, # In the latest appium/wda, set this to True will stuck
+            'shouldWaitForQuiescence': False,
+            # In the latest appium/WebDriverAgent, set shouldWaitForQuiescence to True will stuck
         }
         # Remove empty value to prevent WDARequestError
         for k in list(capabilities.keys()):
@@ -404,9 +405,9 @@ class Client(object):
             capabilities["defaultAlertAction"] = alert_action
 
         data = {
-            'desiredCapabilities': capabilities, # For old WDA
+            'desiredCapabilities': capabilities,  # For old WDA
             "capabilities": {
-                "alwaysMatch": capabilities, # For recent WDA 2019/08/28
+                "alwaysMatch": capabilities,  # For recent WDA 2019/08/28
             }
         }
         try:
@@ -513,27 +514,17 @@ class Session(object):
         """
         return self.http.get("/wda/device/info").value
 
-    def app_current(self):
-        """
-        Returns:
-            dict, eg:
-            {"pid": 1281,
-             "name": "",
-             "bundleId": "com.netease.cloudmusic"}
-        """
-        return self.http.get("/wda/activeAppInfo").value
-
     def set_clipboard(self, content, content_type="plaintext"):
         """ set clipboard """
-        self.http.post("/wda/setPasteboard", {
-            "content": base64.b64encode(content.encode()).decode(),
-            "contentType": content_type
-        })
+        self.http.post(
+            "/wda/setPasteboard", {
+                "content": base64.b64encode(content.encode()).decode(),
+                "contentType": content_type
+            })
 
     #Not working
     #def get_clipboard(self):
     #   self.http.post("/wda/getPasteboard").value
-
 
     # Not working
     #def siri_activate(self, text):
@@ -553,6 +544,16 @@ class Session(object):
             self.http.alert_callback = functools.partial(callback, self)
         else:
             self.http.alert_callback = None
+
+    def app_current(self):
+        """
+        Returns:
+            dict, eg:
+            {"pid": 1281,
+             "name": "",
+             "bundleId": "com.netease.cloudmusic"}
+        """
+        return self.http.get("/wda/activeAppInfo").value
 
     def app_launch(self,
                    bundle_id,
@@ -600,6 +601,18 @@ class Session(object):
         return self.http.post("/wda/apps/state", {
             "bundleId": bundle_id,
         })
+
+    def app_list(self):
+        """
+        Not working very well, only show springboard
+
+        Returns:
+            list of app
+        
+        Return example:
+            [{'pid': 52, 'bundleId': 'com.apple.springboard'}]
+        """
+        return self.http.get("/wda/apps/list").value
 
     def open_url(self, url):
         """
