@@ -172,6 +172,8 @@ s.implicitly_wait(30.0)
 # Current bundleId and sessionId
 print(s.bundle_id, s.id)
 
+s.home() # same as c.home(), use the same API
+
 s.lock() # lock screen
 s.unlock() # unlock screen
 s.locked() # locked status, true or false

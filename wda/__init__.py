@@ -489,6 +489,10 @@ class Session(object):
         """ the session matched bundle id """
         return self.capabilities.get('CFBundleIdentifier')
 
+    def home(self):
+        """ press home without session, temporary """
+        return self.http.post("/../../wda/homescreen")
+
     def locked(self):
         """ returns locked status, true or false """
         return self.http.get("/wda/locked").value
