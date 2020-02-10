@@ -489,6 +489,16 @@ class Session(object):
         """ the session matched bundle id """
         return self.capabilities.get('CFBundleIdentifier')
 
+    @property
+    def alibaba(self):
+        """ Only used in alibaba company """
+        try:
+            import wda_alibaba
+            return wda_alibaba.Alibaba(self)
+        except ImportError:
+            raise RuntimeError(
+                "@alibaba property requires wda_alibaba lib installed")
+
     def home(self):
         """ press home without session, temporary """
         return self.http.post("/../../wda/homescreen")

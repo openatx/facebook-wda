@@ -426,6 +426,12 @@ s.set_alert_callback(_alert_callback)
 s(type="Button").click()
 ```	
 
+## Special property
+```python
+# s: wda.Session
+s.alibaba.xxx # only used in alibaba-company
+```
+
 ## DEVELOP
 See [DEVELOP.md](DEVELOP.md) for more details.
 
