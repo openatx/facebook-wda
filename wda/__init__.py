@@ -493,11 +493,11 @@ class Session(object):
     def alibaba(self):
         """ Only used in alibaba company """
         try:
-            import wda_alibaba
-            return wda_alibaba.Alibaba(self)
+            import wda_taobao
+            return wda_taobao.Alibaba(self)
         except ImportError:
             raise RuntimeError(
-                "@alibaba property requires wda_alibaba lib installed")
+                "@alibaba property requires wda_taobao library installed")
 
     def taobao(self):
         try:
