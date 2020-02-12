@@ -499,6 +499,14 @@ class Session(object):
             raise RuntimeError(
                 "@alibaba property requires wda_alibaba lib installed")
 
+    def taobao(self):
+        try:
+            import wda_taobao
+            return wda_taobao.Taobao(self)
+        except ImportError:
+            raise RuntimeError(
+                "@taobao property requires wda_taobao library installed")
+
     def home(self):
         """ press home without session, temporary """
         return self.http.post("/../../wda/homescreen")
