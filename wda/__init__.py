@@ -18,6 +18,10 @@ import requests
 import retry
 import six
 from six.moves import urllib
+try:
+    from functools import cached_property # Python3.8+
+except ImportError:
+    from cached_property import cached_property
 
 from . import xcui_element_types
 
@@ -225,7 +229,7 @@ class Rect(object):
 
 
 class Client(object):
-    def __init__(self, url=None):
+    def __init__(self, url=None, _session_id=None):
         """
         Args:
             target (string): the device url
@@ -237,6 +241,11 @@ class Client(object):
         assert re.match(r"^https?://", url), "Invalid URL: %r" % url
 
         self.http = HTTPClient(url)
+        
+        # Session variable
+        self.__session_id = _session_id
+        self.__timeout = 30.0
+        self.__target = None
 
     def wait_ready(self, timeout=120):
         """
@@ -419,39 +428,20 @@ class Client(object):
             res = self.session().app_state(bundle_id)
             if res.value != 4:
                 raise
-        httpclient = self.http.new_client('session/' + res.sessionId)
-        return Session(httpclient, res.sessionId)
+        return Client(self.http.address, _session_id=res.sessionId)
 
-
-class Session(object):
-    def __init__(self, httpclient, session_id):
-        """
-        Args:
-            - target(string): for example, http://127.0.0.1:8100
-            - session_id(string): wda session id
-            - timeout (seconds): for element get timeout
-        """
-        self.http = httpclient
-        self._target = None
-        self._timeout = 30.0  # default elment search timeout, change through implicitly_wait(.)
-
-        # self._sid = session_id
-        # Example session value
-        # "capabilities": {
-        #     "CFBundleIdentifier": "com.netease.aabbcc",
-        #     "browserName": "?????",
-        #     "device": "iphone",
-        #     "sdkVersion": "10.2"
-        # }
-        v = self.http.get('/').value
-        self.capabilities = v['capabilities']
-        self._sid = v['sessionId']
-        self.__scale = None
-
+    #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+    ######  Session methods and properties ######
+    #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
     def __str__(self):
-        return 'wda.Session (id=%s)' % self._sid
+        return 'wda.Client (sessionId=%s)' % self._sid
 
     def __enter__(self):
+        """
+        Usage example:
+            with c.session("com.example.app") as app:
+                # do something
+        """
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -459,9 +449,19 @@ class Session(object):
 
     @property
     def id(self):
-        return self._sid
+        return self._session_id
 
     @property
+    def _session_id(self) -> str:
+        if self.__session_id:
+            return self.__session_id
+        return self.status()['sessionId']
+        
+    @property
+    def _session_http(self) -> HTTPClient:
+        return self.http.new_client("session/"+self._session_id)
+    
+    @cached_property
     def scale(self):
         """
         UIKit scale factor
@@ -471,87 +471,44 @@ class Session(object):
         There is another way to get scale
             self.http.get("/wda/screen").value returns {"statusBarSize": {'width': 320, 'height': 20}, 'scale': 2}
         """
-        if self.__scale:
-            return self.__scale
         v = max(self.screenshot().size) / max(self.window_size())
-        self.__scale = round(v)
-        return self.__scale
-
+        return round(v)
+    
+    @cached_property
+    def bundle_id(self):
+        """ the session matched bundle id """
+        v = self._session_http.get("/").value
+        return v['capabilities'].get('CFBundleIdentifier')
+    
     def implicitly_wait(self, seconds):
         """
         set default element search timeout
         """
         assert isinstance(seconds, (int, float))
-        self._timeout = seconds
-
-    @property
-    def bundle_id(self):
-        """ the session matched bundle id """
-        return self.capabilities.get('CFBundleIdentifier')
-
-    @property
-    def alibaba(self):
-        """ Only used in alibaba company """
-        try:
-            import wda_taobao
-            return wda_taobao.Alibaba(self)
-        except ImportError:
-            raise RuntimeError(
-                "@alibaba property requires wda_taobao library installed")
-
-    def taobao(self):
-        try:
-            import wda_taobao
-            return wda_taobao.Taobao(self)
-        except ImportError:
-            raise RuntimeError(
-                "@taobao property requires wda_taobao library installed")
-
-    def home(self):
-        """ press home without session, temporary """
-        return self.http.post("/../../wda/homescreen")
-
-    def locked(self):
-        """ returns locked status, true or false """
-        return self.http.get("/wda/locked").value
-
-    def lock(self):
-        return self.http.post('/wda/lock')
-
-    def unlock(self):
-        """ unlock screen, double press home """
-        return self.http.post('/wda/unlock')
-
+        self.__timeout = seconds
+    
     def battery_info(self):
         """
         Returns dict: (I do not known what it means)
             eg: {"level": 1, "state": 2}
         """
-        return self.http.get("/wda/batteryInfo").value
-
+        return self._session_http.get("/wda/batteryInfo").value
+    
     def device_info(self):
         """
         Returns dict:
             eg: {'currentLocale': 'zh_CN', 'timeZone': 'Asia/Shanghai'}
         """
-        return self.http.get("/wda/device/info").value
+        return self._session_http.get("/wda/device/info").value
 
     def set_clipboard(self, content, content_type="plaintext"):
         """ set clipboard """
-        self.http.post(
+        self._session_http.post(
             "/wda/setPasteboard", {
                 "content": base64.b64encode(content.encode()).decode(),
                 "contentType": content_type
             })
-
-    #Not working
-    #def get_clipboard(self):
-    #   self.http.post("/wda/getPasteboard").value
-
-    # Not working
-    #def siri_activate(self, text):
-    #    self.http.post("/wda/siri/activate", {"text": text})
-
+    
     def set_alert_callback(self, callback):
         """
         Args:
@@ -567,15 +524,13 @@ class Session(object):
         else:
             self.http.alert_callback = None
 
-    def app_current(self):
-        """
-        Returns:
-            dict, eg:
-            {"pid": 1281,
-             "name": "",
-             "bundleId": "com.netease.cloudmusic"}
-        """
-        return self.http.get("/wda/activeAppInfo").value
+    #Not working
+    #def get_clipboard(self):
+    #   self.http.post("/wda/getPasteboard").value
+
+    # Not working
+    #def siri_activate(self, text):
+    #    self.http.post("/wda/siri/activate", {"text": text})
 
     def app_launch(self,
                    bundle_id,
@@ -592,7 +547,7 @@ class Session(object):
         assert isinstance(arguments, (tuple, list))
         assert isinstance(environment, dict)
 
-        return self.http.post(
+        return self._session_http.post(
             "/wda/apps/launch", {
                 "bundleId": bundle_id,
                 "arguments": arguments,
@@ -601,12 +556,12 @@ class Session(object):
             })
 
     def app_activate(self, bundle_id):
-        return self.http.post("/wda/apps/launch", {
+        return self._session_http.post("/wda/apps/launch", {
             "bundleId": bundle_id,
         })
 
     def app_terminate(self, bundle_id):
-        return self.http.post("/wda/apps/terminate", {
+        return self._session_http.post("/wda/apps/terminate", {
             "bundleId": bundle_id,
         })
 
@@ -620,7 +575,7 @@ class Session(object):
         
         value 1(not running) 2(running in background) 3(running in foreground)
         """
-        return self.http.post("/wda/apps/state", {
+        return self._session_http.post("/wda/apps/state", {
             "bundleId": bundle_id,
         })
 
@@ -634,11 +589,11 @@ class Session(object):
         Return example:
             [{'pid': 52, 'bundleId': 'com.apple.springboard'}]
         """
-        return self.http.get("/wda/apps/list").value
+        return self._session_http.get("/wda/apps/list").value
 
     def open_url(self, url):
         """
-        TODO: Never successed using before.
+        TODO: Never successed using before. Looks like use Siri to search.
         https://github.com/facebook/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBSessionCommands.m#L43
         Args:
             url (str): url
@@ -646,17 +601,17 @@ class Session(object):
         Raises:
             WDARequestError
         """
-        return self.http.post('url', {'url': url})
+        return self._session_http.post('url', {'url': url})
 
     def deactivate(self, duration):
         """Put app into background and than put it back
         Args:
             - duration (float): deactivate time, seconds
         """
-        return self.http.post('/wda/deactivateApp', dict(duration=duration))
+        return self._session_http.post('/wda/deactivateApp', dict(duration=duration))
 
     def tap(self, x, y):
-        return self.http.post('/wda/tap/0', dict(x=x, y=y))
+        return self._session_http.post('/wda/tap/0', dict(x=x, y=y))
 
     def _percent2pos(self, x, y, window_size=None):
         if any(isinstance(v, float) for v in [x, y]):
@@ -676,7 +631,7 @@ class Session(object):
 
     def double_tap(self, x, y):
         x, y = self._percent2pos(x, y)
-        return self.http.post('/wda/doubleTap', dict(x=x, y=y))
+        return self._session_http.post('/wda/doubleTap', dict(x=x, y=y))
 
     def tap_hold(self, x, y, duration=1.0):
         """
@@ -690,20 +645,7 @@ class Session(object):
         """
         x, y = self._percent2pos(x, y)
         data = {'x': x, 'y': y, 'duration': duration}
-        return self.http.post('/wda/touchAndHold', data=data)
-
-    def screenshot(self):
-        """
-        Take screenshot with session check
-
-        Returns:
-            PIL.Image
-        """
-        b64data = self.http.get('/screenshot').value
-        raw_data = base64.b64decode(b64data)
-        from PIL import Image
-        buff = io.BytesIO(raw_data)
-        return Image.open(buff)
+        return self._session_http.post('/wda/touchAndHold', data=data)
 
     def swipe(self, x1, y1, x2, y2, duration=0):
         """
@@ -719,7 +661,7 @@ class Session(object):
             x2, y2 = self._percent2pos(x2, y2, size)
 
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
-        return self.http.post('/wda/dragfromtoforduration', data=data)
+        return self._session_http.post('/wda/dragfromtoforduration', data=data)
 
     def swipe_left(self):
         w, h = self.window_size()
@@ -743,7 +685,7 @@ class Session(object):
         Return string
         One of <PORTRAIT | LANDSCAPE>
         """
-        return self.http.get('orientation').value
+        return self._session_http.get('orientation').value
 
     @orientation.setter
     def orientation(self, value):
@@ -752,7 +694,7 @@ class Session(object):
             - orientation(string): LANDSCAPE | PORTRAIT | UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT |
                     UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN
         """
-        return self.http.post('orientation', data={'orientation': value})
+        return self._session_http.post('orientation', data={'orientation': value})
 
     def window_size(self):
         """
@@ -760,7 +702,7 @@ class Session(object):
             namedtuple: eg
                 Size(width=320, height=568)
         """
-        value = self.http.get('/window/size').value
+        value = self._session_http.get('/window/size').value
         w = roundint(value['width'])
         h = roundint(value['height'])
         return namedtuple('Size', ['width', 'height'])(w, h)
@@ -771,40 +713,60 @@ class Session(object):
         """
         if isinstance(value, six.string_types):
             value = list(value)
-        return self.http.post('/wda/keys', data={'value': value})
+        return self._session_http.post('/wda/keys', data={'value': value})
 
     def keyboard_dismiss(self):
         """
         Not working for now
         """
         raise RuntimeError("not pass tests, this method is not allowed to use")
-        self.http.post('/wda/keyboard/dismiss')
+        self._session_http.post('/wda/keyboard/dismiss')
 
     def xpath(self, value):
         """
         For weditor, d.xpath(...)
         """
-        httpclient = self.http.new_client('')
+        httpclient = self._session_http.new_client('')
         return Selector(httpclient, self, xpath=value)
 
     @property
     def alert(self):
         return Alert(self)
 
-    def close(self):
-        return self.http.delete('/')
+    def close(self): # close session
+        return self._session_http.delete('/')
 
     def __call__(self, *args, **kwargs):
         if 'timeout' not in kwargs:
-            kwargs['timeout'] = self._timeout
-        httpclient = self.http.new_client('')
-        return Selector(httpclient, self, *args, **kwargs)
+            kwargs['timeout'] = self.__timeout
+        return Selector(self._session_http, self, *args, **kwargs)
+    
+    @property
+    def alibaba(self):
+        """ Only used in alibaba company """
+        try:
+            import wda_taobao
+            return wda_taobao.Alibaba(self)
+        except ImportError:
+            raise RuntimeError(
+                "@alibaba property requires wda_taobao library installed")
 
+    @property
+    def taobao(self):
+        try:
+            import wda_taobao
+            return wda_taobao.Taobao(self)
+        except ImportError:
+            raise RuntimeError(
+                "@taobao property requires wda_taobao library installed")
+
+
+Session = Client # for compability
 
 class Alert(object):
-    def __init__(self, session):
-        self._s = session
-        self.http = session.http
+    def __init__(self, client):
+        self._c = client
+        self.http = client.http
 
     @property
     def exists(self):
@@ -835,7 +797,7 @@ class Alert(object):
         return self.http.post('/alert/dismiss')
 
     def buttons(self):
-        return self.http.get('/wda/alert/buttons').value
+        return self._c._session_http.get('/wda/alert/buttons').value
 
     def click(self, button_name):
         """
