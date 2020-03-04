@@ -41,7 +41,7 @@ Since facebook/WebDriverAgent has been archived. Recommend use the forked WDA: h
 2. Install python wda client
 
 	```
-	pip install -U facebook-wda
+	pip3 install -U facebook-wda
 	```
 
 ## TCP connection over USB (optional)
@@ -51,13 +51,15 @@ I found a tools named `iproxy` which can forward device port to localhost, it\'s
 
 The usage is very simple `iproxy <local port> <remote port> [udid]`
 
+For more information see [SSH Over USB](https://iphonedevwiki.net/index.php/SSH_Over_USB)
+
 ## Something you need to know
 function `window_size()` return UIKit size, While `screenshot()` image size is Native Resolution 
 
 [![IOS Display](images/ios-display.png)](https://developer.apple.com/library/archive/documentation/DeviceInformation/Reference/iOSDeviceCompatibility/Displays/Displays.html)
 
 when use `screenshot`, the image size is pixels size. eg(`1080 x 1920`)
-But this size is different with `c.session().window_size()`
+But this size is different with `c.window_size()`
 
 use `session.scale` to get UIKit scale factor
 
@@ -123,6 +125,8 @@ c.screenshot().save("screen.jpg") # Good
 ```
 
 ### Session
+> From version 0.7.0, All Session methods moved to Client class. now Session is alias of Client
+
 Open app
 
 ```py
