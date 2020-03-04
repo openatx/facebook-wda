@@ -385,11 +385,7 @@ class Client(object):
         }
         """
         if bundle_id is None:
-            sid = self.status()['sessionId']
-            if not sid:
-                raise RuntimeError("no session created ever")
-            http = self.http.new_client('session/' + sid)
-            return Session(http, sid)
+            return self
 
         if arguments and type(arguments) is not list:
             raise TypeError('arguments must be a list')
