@@ -143,6 +143,8 @@ def _unsafe_httpdo(url, method='GET', data=None):
         r = convert(retjson)
         if r.status != 0:
             raise WDARequestError(r.status, r.value)
+        if isinstance(r.value, dict) and r.value.get("error"):
+            raise WDARequestError(100, r.value['error']) # status:100 for new WebDriverAgent error
         return r
     except JSONDecodeError:
         if response.text == "":
