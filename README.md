@@ -152,12 +152,19 @@ s.close()
 Other app operation (Works in [appium/WebDriverAgent](https://github.com/appium/WebDriverAgent))
 
 ```bash
+c.app_current() # show current app info
+# Output example --
+# {'processArguments': {'env': {}, 'args': []},
+# 'name': '',
+# 'pid': 2978,
+# 'bundleId': 'com.apple.Preferences'}
+
 # Handle alert automatically in WDA (never tested before)
 # alert_action should be one of ["accept", "dismiss"]
 s = c.session("com.apple.Health", alert_action="accept")
 
 # launch without terminate app (WDAEmptyResponseError might raise)
-c.session().app_activate("com.apple.Health")
+c.session().app_activate("com.apple.Health") # same as app_launch
 
 # terminate app
 c.session().app_terminate("com.apple.Health")
@@ -403,6 +410,7 @@ s.alert.buttons()
 # example return: ["设置", "好"]
 
 s.alert.click("设置")
+s.alert.click(["设置", "信任", "安装"]) # when Arg type is list, click the first match, raise ValueError if no match
 ```
 
 ## TODO

@@ -13,13 +13,14 @@ import re
 import threading
 import time
 from collections import defaultdict, namedtuple
+from typing import Union
 
 import requests
 import retry
 import six
 from six.moves import urllib
 try:
-    from functools import cached_property # Python3.8+
+    from functools import cached_property  # Python3.8+
 except ImportError:
     from cached_property import cached_property
 
@@ -144,7 +145,9 @@ def _unsafe_httpdo(url, method='GET', data=None):
         if r.status != 0:
             raise WDARequestError(r.status, r.value)
         if isinstance(r.value, dict) and r.value.get("error"):
-            raise WDARequestError(100, r.value['error']) # status:100 for new WebDriverAgent error
+            raise WDARequestError(
+                100,
+                r.value['error'])  # status:100 for new WebDriverAgent error
         return r
     except JSONDecodeError:
         if response.text == "":
@@ -153,37 +156,39 @@ def _unsafe_httpdo(url, method='GET', data=None):
 
 
 class HTTPClient(object):
-    def __init__(self, address, alert_callback=None):
+    def __init__(self, address, error_callback=None, alert_callback=None):
         """
         Args:
             address (string): url address eg: http://localhost:8100
+            error_callback (func): function to call when error occurs
             alert_callback (func): function to call when alert popup
         """
-        self.address = address
-        self.alert_callback = alert_callback
+        self.address = address.rstrip("/")
+        # self.alert_callback = alert_callback
+        self.error_callback = error_callback
 
-    def new_client(self, path):
-        return HTTPClient(
-            self.address.rstrip('/') + '/' + path.lstrip('/'),
-            self.alert_callback)
+    def new_client(self, path, error_callback=None):
+        return HTTPClient(self.address + '/' + path.lstrip('/'), error_callback
+                          or self.error_callback, self.alert_callback)
 
     def fetch(self, method, url, data=None):
-        return self._fetch_no_alert(method, url, data)
-        # return httpdo(urljoin(self.address, url), method, data)
+        return self._fetch_with_autofix(method, url, data)
 
-    def _fetch_no_alert(self, method, url, data=None, depth=0):
+    def _fetch_with_autofix(self, method, url, data=None, depth=0):
         target_url = urljoin(self.address, url)
         try:
             return httpdo(target_url, method, data)
         except WDARequestError as err:
             if depth >= 10:
                 raise
-            if err.status != 26:  # alert status code
-                raise
-            if not callable(self.alert_callback):
-                raise
-            self.alert_callback()
-            return self._fetch_no_alert(method, url, data, depth=depth + 1)
+            if callable(self.error_callback):
+                ok = self.error_callback(self, err)
+                if ok:
+                    return self._fetch_with_autofix(method,
+                                                    url,
+                                                    data,
+                                                    depth=depth + 1)
+            raise
 
     def __getattr__(self, key):
         """ Handle GET,POST,DELETE, etc ... """
@@ -243,7 +248,7 @@ class Client(object):
         assert re.match(r"^https?://", url), "Invalid URL: %r" % url
 
         self.http = HTTPClient(url)
-        
+
         # Session variable
         self.__session_id = _session_id
         self.__timeout = 30.0
@@ -454,11 +459,23 @@ class Client(object):
         if self.__session_id:
             return self.__session_id
         return self.status()['sessionId']
-        
+
+    def _invalid_session_err_callback(self, hc: HTTPClient, err):
+        if self.__session_id:  # ignore when app is crashed
+            return False
+        if err.value == "invalid session id":
+            # update session id and retry
+            # print("Invalid session id,: update session url", self.id)
+            hc.address = self.http.address + "/session/" + self.id
+            return True
+        return False
+
     @property
     def _session_http(self) -> HTTPClient:
-        return self.http.new_client("session/"+self._session_id)
-    
+        return self.http.new_client(
+            "session/" + self._session_id,
+            error_callback=self._invalid_session_err_callback)
+
     @cached_property
     def scale(self):
         """
@@ -471,27 +488,27 @@ class Client(object):
         """
         v = max(self.screenshot().size) / max(self.window_size())
         return round(v)
-    
+
     @cached_property
     def bundle_id(self):
         """ the session matched bundle id """
         v = self._session_http.get("/").value
         return v['capabilities'].get('CFBundleIdentifier')
-    
+
     def implicitly_wait(self, seconds):
         """
         set default element search timeout
         """
         assert isinstance(seconds, (int, float))
         self.__timeout = seconds
-    
+
     def battery_info(self):
         """
         Returns dict: (I do not known what it means)
             eg: {"level": 1, "state": 2}
         """
         return self._session_http.get("/wda/batteryInfo").value
-    
+
     def device_info(self):
         """
         Returns dict:
@@ -506,7 +523,7 @@ class Client(object):
                 "content": base64.b64encode(content.encode()).decode(),
                 "contentType": content_type
             })
-    
+
     def set_alert_callback(self, callback):
         """
         Args:
@@ -606,7 +623,8 @@ class Client(object):
         Args:
             - duration (float): deactivate time, seconds
         """
-        return self._session_http.post('/wda/deactivateApp', dict(duration=duration))
+        return self._session_http.post('/wda/deactivateApp',
+                                       dict(duration=duration))
 
     def tap(self, x, y):
         return self._session_http.post('/wda/tap/0', dict(x=x, y=y))
@@ -662,20 +680,24 @@ class Client(object):
         return self._session_http.post('/wda/dragfromtoforduration', data=data)
 
     def swipe_left(self):
+        """ swipe right to left """
         w, h = self.window_size()
-        return self.swipe(w, h // 2, 0, h // 2)
+        return self.swipe(w, h // 2, 1, h // 2)
 
     def swipe_right(self):
+        """ swipe left to right """
         w, h = self.window_size()
-        return self.swipe(0, h // 2, w, h // 2)
+        return self.swipe(1, h // 2, w, h // 2)
 
     def swipe_up(self):
+        """ swipe from center to top """
         w, h = self.window_size()
-        return self.swipe(w // 2, h, w // 2, 0)
+        return self.swipe(w // 2, h // 2, w // 2, 1)
 
     def swipe_down(self):
+        """ swipe from center to bottom """
         w, h = self.window_size()
-        return self.swipe(w // 2, 0, w // 2, h)
+        return self.swipe(w // 2, h // 2, w // 2, h - 1)
 
     @property
     def orientation(self):
@@ -692,7 +714,8 @@ class Client(object):
             - orientation(string): LANDSCAPE | PORTRAIT | UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT |
                     UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN
         """
-        return self._session_http.post('orientation', data={'orientation': value})
+        return self._session_http.post('orientation',
+                                       data={'orientation': value})
 
     def window_size(self):
         """
@@ -731,14 +754,14 @@ class Client(object):
     def alert(self):
         return Alert(self)
 
-    def close(self): # close session
+    def close(self):  # close session
         return self._session_http.delete('/')
 
     def __call__(self, *args, **kwargs):
         if 'timeout' not in kwargs:
             kwargs['timeout'] = self.__timeout
         return Selector(self._session_http, self, *args, **kwargs)
-    
+
     @property
     def alibaba(self):
         """ Only used in alibaba company """
@@ -759,20 +782,20 @@ class Client(object):
                 "@taobao property requires wda_taobao library installed")
 
 
-Session = Client # for compability
+Session = Client  # for compability
+
 
 class Alert(object):
     def __init__(self, client):
         self._c = client
-        self.http = client.http
+        self.http = client._session_http
 
     @property
     def exists(self):
         try:
             self.text
         except WDARequestError as e:
-            if e.status != 27:
-                raise
+            assert e.value == "no such alert"
             return False
         return True
 
@@ -795,15 +818,24 @@ class Alert(object):
         return self.http.post('/alert/dismiss')
 
     def buttons(self):
-        return self._c._session_http.get('/wda/alert/buttons').value
+        return self.http.get('/wda/alert/buttons').value
 
-    def click(self, button_name):
+    def click(self, button_name: Union[str, list]):
         """
         Args:
             - button_name: the name of the button
+
+        Raises:
+            ValueError when button_name is not in avaliable button names
         """
         # Actually, It has no difference POST to accept or dismiss
-        return self.http.post('/alert/accept', data={"name": button_name})
+        if isinstance(button_name, str):
+            return self.http.post('/alert/accept', data={"name": button_name})
+        avaliable_names = self.buttons()
+        for bname in button_name:
+            if bname in avaliable_names:
+                return self.http.post('/alert/accept', data={"name": bname})
+        raise ValueError("Only these buttons can be clicked", avaliable_names)
 
 
 class Selector(object):
@@ -1222,8 +1254,9 @@ class Element(object):
     def tap(self):
         return self._req('post', '/click')
 
-    def click(self):
-        """ Alias of tap """
+    def click(self, scroll: str = None):
+        """ Alias of tap
+        """
         return self.tap()
 
     def tap_hold(self, duration=1.0):
