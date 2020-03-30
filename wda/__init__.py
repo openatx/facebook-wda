@@ -164,7 +164,7 @@ class HTTPClient(object):
             alert_callback (func): function to call when alert popup
         """
         self.address = address.rstrip("/")
-        # self.alert_callback = alert_callback
+        self.alert_callback = alert_callback
         self.error_callback = error_callback
 
     def new_client(self, path, error_callback=None):
@@ -1078,11 +1078,6 @@ class Selector(object):
             if start_time + timeout < time.time():
                 break
             time.sleep(0.01)
-
-        # check alert again
-        if self.session.alert.exists and self.http.alert_callback:
-            self.http.alert_callback()
-            return self.get(timeout, raise_error)
 
         if raise_error:
             raise WDAElementNotFoundError("element not found",
