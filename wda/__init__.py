@@ -794,10 +794,10 @@ class Alert(object):
     def exists(self):
         try:
             self.text
+            return True
         except WDARequestError as e:
-            assert e.value == "no such alert"
+            # expect e.status != 27 in old version and e.value == 'no such alert' in new version
             return False
-        return True
 
     @property
     def text(self):
