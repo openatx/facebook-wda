@@ -264,12 +264,28 @@ s(id="URL").exists # return True or False
 
 # using id or other query conditions
 s(id='URL')
+
+# using className
+s(className="Button")
+
+# using name
 s(name='URL')
-s(text="URL") # text is alias of name
 s(nameContains='UR')
-s(label='Address')
-s(labelContains='Addr')
-s(name='URL', index=1) # find the second element. index starts from 0
+s(nameMatches=".RL")
+
+# using label
+s(label="label")
+s(labelContains="URL")
+
+# using value
+s(value="Enter")
+s(valueContains="RL")
+
+# using  visible, enabled
+s(visible=True, enabled=True)
+
+# using index, index must combined with at least on label,value, etc...
+s(name='URL', index=1) # find the second element. index of founded elements, min is 0
 
 # combines search conditions
 # attributes bellow can combines
