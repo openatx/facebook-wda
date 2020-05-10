@@ -10,6 +10,9 @@ Most functions finished.
 
 Since facebook/WebDriverAgent has been archived. Recommend use the forked WDA: https://github.com/appium/WebDriverAgent
 
+## Alternatives
+- gwda (Golang): https://github.com/ElectricBubble/gwda
+
 ## Installation
 1. You need to start WebDriverAgent by yourself
 
