@@ -13,7 +13,7 @@ import re
 import threading
 import time
 from collections import defaultdict, namedtuple
-from typing import Union
+from typing import Union, Optional
 
 import requests
 import retry
@@ -351,9 +351,9 @@ class Client(object):
 
     def session(self,
                 bundle_id=None,
-                arguments=None,
-                environment=None,
-                alert_action=None):
+                arguments: Optional[list] = None,
+                environment: Optional[dict] = None,
+                alert_action: Optional[str] = None):
         """
         Args:
             - bundle_id (str): the app bundle id
@@ -380,50 +380,37 @@ class Client(object):
         To create a new session, send json data like
 
         {
-            "desiredCapabilities": {
-                "bundleId": "your-bundle-id",
-                "app": "your-app-path"
-                "shouldUseCompactResponses": (bool),
-                "shouldUseTestManagerForVisibilityDetection": (bool),
-                "maxTypingFrequency": (integer),
-                "arguments": (list(str)),
-                "environment": (dict: str->str)
+            "capabilities": {
+                "alwaysMatch": {
+                    "bundleId": "your-bundle-id",
+                    "app": "your-app-path"
+                    "shouldUseCompactResponses": (bool),
+                    "shouldUseTestManagerForVisibilityDetection": (bool),
+                    "maxTypingFrequency": (integer),
+                    "arguments": (list(str)),
+                    "environment": (dict: str->str)
+                }
             },
         }
+
+        Or {"capabilities": {}}
         """
-        if bundle_id is None:
-            return self
-
-        if arguments and type(arguments) is not list:
-            raise TypeError('arguments must be a list')
-
-        if environment and type(environment) is not dict:
-            raise TypeError('environment must be a dict')
-
-        capabilities = {
-            'bundleId': bundle_id,
-            'arguments': arguments,
-            'environment': environment,
-            'shouldWaitForQuiescence': False,
-            # In the latest appium/WebDriverAgent, set shouldWaitForQuiescence to True will stuck
-        }
-        # Remove empty value to prevent WDARequestError
-        for k in list(capabilities.keys()):
-            if capabilities[k] is None:
-                capabilities.pop(k)
-
-        if alert_action:
-            assert alert_action in ["accept", "dismiss"]
-            capabilities["defaultAlertAction"] = alert_action
-
-        data = {
-            'desiredCapabilities': capabilities,  # For old WDA
-            "capabilities": {
-                "alwaysMatch": capabilities,  # For recent WDA 2019/08/28
+        capabilities = {}
+        if bundle_id:
+            always_match = {
+                "bundleId": bundle_id,
+                "arguments": arguments or [],
+                "environment": environment or {},
+                "shouldWaitForQuiescence": False,
             }
-        }
+            if alert_action:
+                assert alert_action in ["accept", "dismiss"]
+                capabilities["defaultAlertAction"] = alert_action
+
+            capabilities['alwaysMatch'] = always_match
+
         try:
-            res = self.http.post('session', data)
+            res = self.http.post('session', {"capabilities": capabilities})
         except WDAEmptyResponseError:
             """ when there is alert, might be got empty response
             use /wda/apps/state may still get sessionId
@@ -458,7 +445,10 @@ class Client(object):
     def _session_id(self) -> str:
         if self.__session_id:
             return self.__session_id
-        return self.status()['sessionId']
+        current_sid = self.status()['sessionId']
+        if current_sid:
+            return current_sid
+        return self.session().id
 
     def _invalid_session_err_callback(self, hc: HTTPClient, err):
         if self.__session_id:  # ignore when app is crashed
@@ -515,6 +505,21 @@ class Client(object):
             eg: {'currentLocale': 'zh_CN', 'timeZone': 'Asia/Shanghai'}
         """
         return self._session_http.get("/wda/device/info").value
+
+    @property
+    def info(self):
+        """
+        Returns:
+            {'timeZone': 'Asia/Shanghai',
+            'currentLocale': 'zh_CN',
+            'model': 'iPhone',
+            'uuid': '9DAC43B3-6887-428D-B5D5-4892D1F38BAA',
+            'userInterfaceIdiom': 0,
+            'userInterfaceStyle': 'unsupported',
+            'name': 'iPhoneSE',
+            'isSimulator': False}
+        """
+        return self.device_info()
 
     def set_clipboard(self, content, content_type="plaintext"):
         """ set clipboard """
