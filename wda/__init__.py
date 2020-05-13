@@ -279,7 +279,12 @@ class Client(object):
 
     def home(self):
         """Press home button"""
-        return self.http.post('/wda/homescreen')
+        try:
+            self.http.post('/wda/homescreen')
+        except WDARequestError as e:
+            if "Timeout waiting until SpringBoard is visible" in str(e):
+                return
+            raise
 
     def healthcheck(self):
         """Hit healthcheck"""
@@ -409,8 +414,13 @@ class Client(object):
 
             capabilities['alwaysMatch'] = always_match
 
+        payload = {
+            "capabilities": capabilities,
+            "desiredCapabilities": always_match, # 兼容旧版的wda
+        }
+
         try:
-            res = self.http.post('session', {"capabilities": capabilities})
+            res = self.http.post('session', payload)
         except WDAEmptyResponseError:
             """ when there is alert, might be got empty response
             use /wda/apps/state may still get sessionId
