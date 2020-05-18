@@ -416,7 +416,7 @@ class Client(object):
 
         payload = {
             "capabilities": capabilities,
-            "desiredCapabilities": always_match, # 兼容旧版的wda
+            "desiredCapabilities": capabilities.get('alwaysMatch'), # 兼容旧版的wda
         }
 
         try:
@@ -750,6 +750,16 @@ class Client(object):
         if isinstance(value, six.string_types):
             value = list(value)
         return self._session_http.post('/wda/keys', data={'value': value})
+
+    def press(self, name: str):
+        """
+        Args:
+            name: one of <home|volumeUp|volumeDown>
+        """
+        valid_names = ("home", "volumeUp", "volumeDown")
+        if name not in valid_names:
+            raise ValueError(f"Invalid name: {name}, should be one of {valid_names}")
+        self._session_http.post("/wda/pressButton", {"name": name})
 
     def keyboard_dismiss(self):
         """

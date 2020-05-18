@@ -257,6 +257,11 @@ s.tap_hold(x, y, 1.0)
 
 # Hide keyboard (not working in simulator), did not success using latest WDA
 s.keyboard_dismiss()
+
+# press home, volumeUp, volumeDown
+s.press("home") # fater then s.home()
+s.press("volumeUp")
+s.press("volumeDown")
 ```
 
 ### Find element
