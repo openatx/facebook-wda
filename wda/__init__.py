@@ -277,7 +277,8 @@ class Client(object):
     @retry.retry(exceptions=WDAEmptyResponseError, tries=3, delay=2)
     def status(self):
         res = self.http.get('status')
-        res.value['sessionId'] = res.get("sessionId")
+        res["value"]['sessionId'] = res.get("sessionId")
+        # Can't use res.value['sessionId'] = ...
         return res.value
 
     def home(self):
