@@ -15,6 +15,7 @@ import time
 from collections import defaultdict, namedtuple
 from typing import Union, Optional
 
+import attrdict
 import requests
 import retry
 import six
@@ -76,7 +77,10 @@ def convert(dictionary):
     """
     Convert dict to namedtuple
     """
-    return namedtuple('GenericDict', list(dictionary.keys()))(**dictionary)
+    return attrdict.AttrDict(dictionary)
+
+    # Old implement
+    #return namedtuple('GenericDict', list(dictionary.keys()))(**dictionary)
 
 
 def urljoin(*urls):
@@ -273,8 +277,7 @@ class Client(object):
     @retry.retry(exceptions=WDAEmptyResponseError, tries=3, delay=2)
     def status(self):
         res = self.http.get('status')
-        sid = res.sessionId
-        res.value['sessionId'] = sid
+        res.value['sessionId'] = res.get("sessionId")
         return res.value
 
     def home(self):
@@ -433,9 +436,6 @@ class Client(object):
     #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
     ######  Session methods and properties ######
     #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
-    def __str__(self):
-        return 'wda.Client (sessionId=%s)' % self._sid
-
     def __enter__(self):
         """
         Usage example:
