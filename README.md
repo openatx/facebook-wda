@@ -93,6 +93,21 @@ c = wda.Client()
 
 A `wda.WDAError` will be raised if communite with WDA went wrong.
 
+**Experiment feature**: create through usbmuxd without `iproxy`
+
+class `USBClient` inherit from `Client`
+
+If WebDriverAgent running on your **mac**, you can connect through `unix:/var/run/usbmuxd`
+
+```python
+import wda
+
+# 如果只有一个设备也可以简写为
+# c = wda.USBClient()
+c = wda.USBClient("539c5fffb18f2be0bf7f771d68f7c327fb68d2d9", port=12121)
+
+print(c.window_size())
+```
 
 ### Client
 
@@ -529,6 +544,10 @@ Source code
 
 - [Router](https://github.com/facebook/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBElementCommands.m#L62)
 - [Alert](https://github.com/facebook/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBAlertViewCommands.m#L25)
+
+## Thanks
+- https://github.com/msabramo/requests-unixsocket
+- https://github.com/iOSForensics/pymobiledevice
 
 ## Articles
 * <https://testerhome.com/topics/5524> By [diaojunxiam](https://github.com/diaojunxian)

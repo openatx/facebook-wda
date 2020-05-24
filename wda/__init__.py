@@ -26,6 +26,7 @@ except ImportError:
     from cached_property import cached_property
 
 from . import xcui_element_types
+from . import requests_usbmux
 
 urlparse = urllib.parse.urlparse
 _urljoin = urllib.parse.urljoin
@@ -119,6 +120,11 @@ def httpdo(url, method="GET", data=None):
         return _unsafe_httpdo(url, method, data)
 
 
+@functools.lru_cache(1024)
+def _requests_session_pool_get(scheme, netloc):
+    return requests_usbmux.Session()
+
+
 def _unsafe_httpdo(url, method='GET', data=None):
     """
     Do HTTP Request
@@ -130,10 +136,12 @@ def _unsafe_httpdo(url, method='GET', data=None):
             method=method.upper(), body=body or '', url=url))
 
     try:
-        response = requests.request(method,
-                                    url,
-                                    json=data,
-                                    timeout=HTTP_TIMEOUT)
+        u = urlparse(url)
+        request_session = _requests_session_pool_get(u.scheme, u.netloc)
+        response = request_session.request(method,
+                                   url,
+                                   json=data,
+                                   timeout=HTTP_TIMEOUT)
     except (requests.exceptions.ConnectionError,
             requests.exceptions.ReadTimeout) as e:
         raise
@@ -199,12 +207,15 @@ class HTTPClient(object):
         return functools.partial(self.fetch, key)
 
 
-class Rect(object):
+class Rect(list):
     def __init__(self, x, y, width, height):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
+        super().__init__([x, y, width, height])
+        self.__dict__.update({
+            "x": x,
+            "y": y,
+            "width": width,
+            "height": height
+        })
 
     def __str__(self):
         return 'Rect(x={x}, y={y}, width={w}, height={h})'.format(
@@ -420,7 +431,7 @@ class Client(object):
 
         payload = {
             "capabilities": capabilities,
-            "desiredCapabilities": capabilities.get('alwaysMatch'), # 兼容旧版的wda
+            "desiredCapabilities": capabilities.get('alwaysMatch'),  # 兼容旧版的wda
         }
 
         try:
@@ -759,7 +770,8 @@ class Client(object):
         """
         valid_names = ("home", "volumeUp", "volumeDown")
         if name not in valid_names:
-            raise ValueError(f"Invalid name: {name}, should be one of {valid_names}")
+            raise ValueError(
+                f"Invalid name: {name}, should be one of {valid_names}")
         self._session_http.post("/wda/pressButton", {"name": name})
 
     def keyboard_dismiss(self):
@@ -1337,3 +1349,11 @@ class Element(object):
 
     # todo lot of other operations
     # tap_hold
+
+
+class USBClient(Client):
+    """ connect device through unix:/var/run/usbmuxd """
+
+    def __init__(self, udid: str = "", port: int = 8100):
+        super().__init__()
+        self.http = HTTPClient("usbmux://{}:{}".format(udid, port))
