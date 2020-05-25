@@ -416,6 +416,13 @@ class Client(object):
 
         Or {"capabilities": {}}
         """
+        if not bundle_id:
+            # 旧版的WDA创建Session不允许bundleId为空，但是总是可以拿到sessionId
+            # 新版的WDA允许bundleId为空，但是初始状态没有sessionId
+            session_id = self.status().get("sessionId")
+            if session_id:
+                return self
+
         capabilities = {}
         if bundle_id:
             always_match = {
@@ -432,7 +439,7 @@ class Client(object):
 
         payload = {
             "capabilities": capabilities,
-            "desiredCapabilities": capabilities.get('alwaysMatch'),  # 兼容旧版的wda
+            "desiredCapabilities": capabilities.get('alwaysMatch', {}),  # 兼容旧版的wda
         }
 
         try:
