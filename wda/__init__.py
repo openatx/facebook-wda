@@ -93,8 +93,9 @@ def urljoin(*urls):
 
     This function fix that.
     """
-    return reduce(_urljoin, [u.strip('/') + '/' for u in urls if u.strip('/')],
-                  '').rstrip('/')
+    return '/'.join([u.strip("/") for u in urls])
+    #return reduce(_urljoin, [u.strip('/') + '/' for u in urls if u.strip('/')],
+    #              '').rstrip('/')
 
 
 def roundint(i):
@@ -139,9 +140,9 @@ def _unsafe_httpdo(url, method='GET', data=None):
         u = urlparse(url)
         request_session = _requests_session_pool_get(u.scheme, u.netloc)
         response = request_session.request(method,
-                                   url,
-                                   json=data,
-                                   timeout=HTTP_TIMEOUT)
+                                           url,
+                                           json=data,
+                                           timeout=HTTP_TIMEOUT)
     except (requests.exceptions.ConnectionError,
             requests.exceptions.ReadTimeout) as e:
         raise
@@ -260,7 +261,7 @@ class Client(object):
         """
         if not url:
             url = os.environ.get('DEVICE_URL', 'http://localhost:8100')
-        assert re.match(r"^https?://", url), "Invalid URL: %r" % url
+        assert re.match(r"^(usbmux|https?)://", url), "Invalid URL: %r" % url
 
         self.http = HTTPClient(url)
 
@@ -621,6 +622,19 @@ class Client(object):
             "bundleId": bundle_id,
         })
 
+    def app_start(self,
+                  bundle_id,
+                  arguments=[],
+                  environment={},
+                  wait_for_quiescence=False):
+        """ alias for app_launch """
+        return self.app_launch(bundle_id, arguments, environment,
+                               wait_for_quiescence)
+
+    def app_stop(self, bundle_id: str):
+        """ alias for app_terminate """
+        self.app_terminate(bundle_id)
+
     def app_list(self):
         """
         Not working very well, only show springboard
@@ -665,11 +679,17 @@ class Client(object):
             assert h >= y >= 0
         return (x, y)
 
-    def click(self, x, y):
+    def click(self, x, y, duration: Optional[float] = None):
         """
-        x, y can be float(percent) or int
+        Combine tap and tap_hold
+        
+        Args:
+            x, y: can be float(percent) or int
+            duration (optional): tap_hold duration
         """
         x, y = self._percent2pos(x, y)
+        if duration:
+            return self.tap_hold(x, y, duration)
         return self.tap(x, y)
 
     def double_tap(self, x, y):
@@ -1325,6 +1345,17 @@ class Element(object):
             raise ValueError("Invalid direction")
         return self
 
+    # TvOS
+    # @property
+    # def focused(self):
+    #
+    # def focuse(self):
+    
+    def pickerwheel_select(self):
+        """ Select by pickerwheel """
+        # Ref: https://github.com/appium/WebDriverAgent/blob/e5d46a85fbdb22e401d396cedf0b5a9bbc995084/WebDriverAgentLib/Commands/FBElementCommands.m#L88
+        raise NotImplementedError()
+
     def pinch(self, scale, velocity):
         """
         Args:
@@ -1353,7 +1384,5 @@ class Element(object):
 
 class USBClient(Client):
     """ connect device through unix:/var/run/usbmuxd """
-
     def __init__(self, udid: str = "", port: int = 8100):
-        super().__init__()
-        self.http = HTTPClient("usbmux://{}:{}".format(udid, port))
+        super().__init__(url="usbmux://{}:{}".format(udid, port))

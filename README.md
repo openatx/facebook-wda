@@ -333,6 +333,26 @@ s(classChain='**/Button[`name == "URL"`]')
 
 To see more `Class Chain Queries` examples, view <https://github.com/facebookarchive/WebDriverAgent/wiki/Class-Chain-Queries-Construction-Rules>
 
+### Get Element info
+```python
+e = s(text='Dashboard').get(timeout=10.0)
+
+# get element attributes
+e.className # XCUIElementTypeStaticText
+e.name # XCUIElementTypeStaticText  /name
+e.visible # True    /attribute/visible
+e.value # Dashboard /attribute/value
+e.label # Dashboard /attribute/label
+e.text # Dashboard  /text
+e.enabled # True    /enabled
+e.displayed # True  /displayed
+
+e.bounds # Rect(x=161, y=32, width=53, height=21)  /rect
+x, y, w, h = e.bounds
+
+
+```
+
 ### Element operations (eg: `tap`, `scroll`, `set_text` etc...)
 Exmaple search element and tap
 
