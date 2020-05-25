@@ -20,10 +20,9 @@ from typing import Optional, Union
 from cached_property import cached_property
 from logzero import setup_logger
 
-PROGRAM_NAME = "pyusbmux-client"
-logger = logging.getLogger("wda.usbmux")
+PROGRAM_NAME = "facebook-wda"
+logger = logging.getLogger("facebook-wda")
 
-#setup_logger("wda.usbmux")
 
 class MuxError(Exception):
     """ Mutex error """
@@ -207,7 +206,9 @@ class Device(object):
         self._udid = udid
         self._info = self.info
 
-    @cached_property
+    # DeviceID will be changed if device re-plug
+    # So can not use cached_property here
+    @property
     def info(self) -> dict:
         """
         Example return:

@@ -95,6 +95,8 @@ A `wda.WDAError` will be raised if communite with WDA went wrong.
 
 **Experiment feature**: create through usbmuxd without `iproxy`
 
+> Added in version: 0.9.0
+
 class `USBClient` inherit from `Client`
 
 If WebDriverAgent running on your **mac**, you can connect through `unix:/var/run/usbmuxd`
@@ -103,9 +105,13 @@ If WebDriverAgent running on your **mac**, you can connect through `unix:/var/ru
 import wda
 
 # 如果只有一个设备也可以简写为
-# c = wda.USBClient()
+c = wda.USBClient()
+
+# 支持指定设备的udid，和WDA的端口号
 c = wda.USBClient("539c5fffb18f2be0bf7f771d68f7c327fb68d2d9", port=12121)
 
+# 也支持通过DEVICE_URL访问
+c = wda.Client("usbmux://{udid}:8100".format(udid="539c5fffb18f2be0bf7f771d68f7c327fb68d2d9"))
 print(c.window_size())
 ```
 

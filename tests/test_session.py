@@ -119,3 +119,9 @@ def test_text_contains_matches(c: wda.Client):
         assert not s(textMatches="^lue?").exists
         assert not s(textMatches="^Blue$").exists
         assert s(textMatches=r"^(Blue|Red).*").exists
+
+
+def test_app_operation(c: wda.Client):
+    c.session("com.apple.Preferences")
+    appinfo = c.app_current()
+    assert appinfo['bundleId'] == 'com.apple.Preferences'
