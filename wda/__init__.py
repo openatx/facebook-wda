@@ -227,8 +227,8 @@ class Rect(list):
 
     @property
     def center(self):
-        return namedtuple('Point', ['x', 'y'])(self.x + self.width / 2,
-                                               self.y + self.height / 2)
+        return namedtuple('Point', ['x', 'y'])(self.x + self.width // 2,
+                                               self.y + self.height // 2)
 
     @property
     def origin(self):
@@ -906,7 +906,7 @@ class Alert(object):
 class Selector(object):
     def __init__(self,
                  httpclient,
-                 session,
+                 session: Session,
                  predicate=None,
                  id=None,
                  className=None,
@@ -1113,7 +1113,7 @@ class Selector(object):
         """
         es = []
         for element_id in self.find_element_ids():
-            e = Element(self.http.new_client(''), element_id)
+            e = Element(self.session, element_id)
             es.append(e)
         return es
 
@@ -1232,15 +1232,20 @@ class Selector(object):
 
 
 class Element(object):
-    def __init__(self, httpclient, id):
+    def __init__(self, session: Session, id: str):
         """
         base_url eg: http://localhost:8100/session/$SESSION_ID
         """
-        self.http = httpclient
+        self._session = session
         self._id = id
+        self._httpclient = session._session_http
 
     def __repr__(self):
         return '<wda.Element(id="{}")>'.format(self.id)
+    
+    @cached_property
+    def http(self):
+        return self._httpclient
 
     def _req(self, method, url, data=None):
         return self.http.fetch(method, '/element/' + self.id + url, data)
@@ -1304,7 +1309,7 @@ class Element(object):
         return self._prop('attribute/visible')
 
     @property
-    def bounds(self):
+    def bounds(self) -> Rect:
         value = self._prop('rect')
         x, y = value['x'], value['y']
         w, h = value['width'], value['height']
@@ -1315,9 +1320,14 @@ class Element(object):
         return self._req('post', '/click')
 
     def click(self, scroll: str = None):
-        """ Alias of tap
         """
-        return self.tap()
+        Get element center position and do click, a little slower
+        """
+        # Some one reported, invisible element can not click
+        # So here, git position and then do tap
+        x, y = self.bounds.center
+        self._session.click(x, y)
+        # return self.tap()
 
     def tap_hold(self, duration=1.0):
         """
