@@ -5,6 +5,7 @@ from __future__ import print_function, unicode_literals
 
 import base64
 import copy
+import enum
 import functools
 import io
 import json
@@ -73,6 +74,10 @@ class WDAElementNotFoundError(WDAError):
 class WDAElementNotDisappearError(WDAError):
     """ element not disappera """
 
+
+class Status(enum.IntEnum):
+    INVALID_SESSION_ID = 10 # error: "invalid session id", "message": "Session does not exist"
+    UNKNOWN = 100 # other status
 
 def convert(dictionary):
     """
@@ -158,9 +163,12 @@ def _unsafe_httpdo(url, method='GET', data=None):
         if r.status != 0:
             raise WDARequestError(r.status, r.value)
         if isinstance(r.value, dict) and r.value.get("error"):
-            raise WDARequestError(
-                100,
-                r.value['error'])  # status:100 for new WebDriverAgent error
+            err = r.value['error']
+            if err == "invalid session id":
+                status = Status.INVALID_SESSION_ID
+            else:
+                status = Status.UNKNOWN
+            raise WDARequestError(status, err)
         return r
     except JSONDecodeError:
         if response.text == "":
@@ -195,6 +203,7 @@ class HTTPClient(object):
             if depth >= 10:
                 raise
             if callable(self.error_callback):
+                # handle error and then continue
                 ok = self.error_callback(self, err)
                 if ok:
                     return self._fetch_with_autofix(method,
@@ -267,6 +276,7 @@ class Client(object):
 
         # Session variable
         self.__session_id = _session_id
+        self.__is_app = bool(_session_id) # set to freeze session_id
         self.__timeout = 30.0
         self.__target = None
 
@@ -469,23 +479,24 @@ class Client(object):
 
     @property
     def id(self):
-        return self._session_id
+        return self._get_session_id()
 
-    @property
-    def _session_id(self) -> str:
+    def _get_session_id(self) -> str:
         if self.__session_id:
             return self.__session_id
         current_sid = self.status()['sessionId']
         if current_sid:
+            self.__session_id = current_sid # store old session id to reduce request count
             return current_sid
         return self.session().id
 
     def _invalid_session_err_callback(self, hc: HTTPClient, err):
-        if self.__session_id:  # ignore when app is crashed
+        if self.__is_app and self.__session_id:  # ignore when app is crashed
             return False
-        if err.value == "invalid session id":
+        if err.status == Status.INVALID_SESSION_ID:
             # update session id and retry
             # print("Invalid session id,: update session url", self.id)
+            self.__session_id = None
             hc.address = self.http.address + "/session/" + self.id
             return True
         return False
@@ -493,7 +504,7 @@ class Client(object):
     @property
     def _session_http(self) -> HTTPClient:
         return self.http.new_client(
-            "session/" + self._session_id,
+            "session/" + self._get_session_id(),
             error_callback=self._invalid_session_err_callback)
 
     @cached_property
