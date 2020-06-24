@@ -223,6 +223,8 @@ class HTTPClient(object):
 
     def __getattr__(self, key):
         """ Handle GET,POST,DELETE, etc ... """
+        if key.startswith("_"):
+            raise AttributeError("Invalid attr", key)
         return functools.partial(self.fetch, key)
 
 
@@ -504,7 +506,7 @@ class Client(object):
             return False
         if err.status == Status.INVALID_SESSION_ID:
             # update session id and retry
-            # print("Invalid session id,: update session url", self.id)
+            # print("Invalid session id,: update session url", self._id)
             self.__session_id = None
             hc.address = self.http.address + "/session/" + self.id
             return True
@@ -1005,36 +1007,36 @@ class Selector(object):
         self.http = httpclient
         self.session = session
 
-        self.predicate = predicate
-        self.id = id
-        self.class_name = className or type
-        self.name = self._add_escape_character_for_quote_prime_character(
+        self._predicate = predicate
+        self._id = id
+        self._class_name = className or type
+        self._name = self._add_escape_character_for_quote_prime_character(
             name or text)
-        self.name_part = nameContains or textContains
-        self.name_regex = nameMatches or textMatches
-        self.value = value
-        self.value_part = valueContains
-        self.label = label
-        self.label_part = labelContains
-        self.enabled = enabled
-        self.visible = visible
-        self.index = index
+        self._name_part = nameContains or textContains
+        self._name_regex = nameMatches or textMatches
+        self._value = value
+        self._value_part = valueContains
+        self._label = label
+        self._label_part = labelContains
+        self._enabled = enabled
+        self._visible = visible
+        self._index = index
 
-        self.xpath = self._fix_xcui_type(xpath)
-        self.class_chain = self._fix_xcui_type(classChain)
-        self.timeout = timeout
+        self._xpath = self._fix_xcui_type(xpath)
+        self._class_chain = self._fix_xcui_type(classChain)
+        self._timeout = timeout
         # some fixtures
-        if self.class_name and not self.class_name.startswith(
+        if self._class_name and not self._class_name.startswith(
                 'XCUIElementType'):
-            self.class_name = 'XCUIElementType' + self.class_name
-        if self.name_regex:
-            if not self.name_regex.startswith(
-                    '^') and not self.name_regex.startswith('.*'):
-                self.name_regex = '.*' + self.name_regex
-            if not self.name_regex.endswith(
-                    '$') and not self.name_regex.endswith('.*'):
-                self.name_regex = self.name_regex + '.*'
-        self.parent_class_chains = parent_class_chains
+            self._class_name = 'XCUIElementType' + self._class_name
+        if self._name_regex:
+            if not self._name_regex.startswith(
+                    '^') and not self._name_regex.startswith('.*'):
+                self._name_regex = '.*' + self._name_regex
+            if not self._name_regex.endswith(
+                    '$') and not self._name_regex.endswith('.*'):
+                self._name_regex = self._name_regex + '.*'
+        self._parent_class_chains = parent_class_chains
 
     def _fix_xcui_type(self, s):
         if s is None:
@@ -1079,49 +1081,49 @@ class Selector(object):
 
     def _gen_class_chain(self):
         # just return if aleady exists predicate
-        if self.predicate:
-            return '/XCUIElementTypeAny[`' + self.predicate + '`]'
+        if self._predicate:
+            return '/XCUIElementTypeAny[`' + self._predicate + '`]'
         qs = []
-        if self.name:
-            qs.append("name == '%s'" % self.name)
-        if self.name_part:
-            qs.append("name CONTAINS '%s'" % self.name_part)
-        if self.name_regex:
+        if self._name:
+            qs.append("name == '%s'" % self._name)
+        if self._name_part:
+            qs.append("name CONTAINS '%s'" % self._name_part)
+        if self._name_regex:
             qs.append("name MATCHES '%s'" %
-                      self.name_regex.encode('unicode_escape'))
-        if self.label:
-            qs.append("label == '%s'" % self.label)
-        if self.label_part:
-            qs.append("label CONTAINS '%s'" % self.label_part)
-        if self.value:
-            qs.append("value == '%s'" % self.value)
-        if self.value_part:
-            qs.append("value CONTAINS ’%s'" % self.value_part)
-        if self.visible is not None:
-            qs.append("visible == %s" % 'true' if self.visible else 'false')
-        if self.enabled is not None:
-            qs.append("enabled == %s" % 'true' if self.enabled else 'false')
+                      self._name_regex.encode('unicode_escape'))
+        if self._label:
+            qs.append("label == '%s'" % self._label)
+        if self._label_part:
+            qs.append("label CONTAINS '%s'" % self._label_part)
+        if self._value:
+            qs.append("value == '%s'" % self._value)
+        if self._value_part:
+            qs.append("value CONTAINS ’%s'" % self._value_part)
+        if self._visible is not None:
+            qs.append("visible == %s" % 'true' if self._visible else 'false')
+        if self._enabled is not None:
+            qs.append("enabled == %s" % 'true' if self._enabled else 'false')
         predicate = ' AND '.join(qs)
-        chain = '/' + (self.class_name or 'XCUIElementTypeAny')
+        chain = '/' + (self._class_name or 'XCUIElementTypeAny')
         if predicate:
             chain = chain + '[`' + predicate + '`]'
-        if self.index:
-            chain = chain + '[%d]' % self.index
+        if self._index:
+            chain = chain + '[%d]' % self._index
         return chain
 
     def find_element_ids(self):
         elems = []
-        if self.id:
-            return self._wdasearch('id', self.id)
-        if self.predicate:
-            return self._wdasearch('predicate string', self.predicate)
-        if self.xpath:
-            return self._wdasearch('xpath', self.xpath)
-        if self.class_chain:
-            return self._wdasearch('class chain', self.class_chain)
+        if self._id:
+            return self._wdasearch('id', self._id)
+        if self._predicate:
+            return self._wdasearch('predicate string', self._predicate)
+        if self._xpath:
+            return self._wdasearch('xpath', self._xpath)
+        if self._class_chain:
+            return self._wdasearch('class chain', self._class_chain)
 
         chain = '**' + ''.join(
-            self.parent_class_chains) + self._gen_class_chain()
+            self._parent_class_chains) + self._gen_class_chain()
         if DEBUG:
             print('CHAIN:', chain)
         return self._wdasearch('class chain', chain)
@@ -1155,7 +1157,7 @@ class Selector(object):
         """
         start_time = time.time()
         if timeout is None:
-            timeout = self.timeout
+            timeout = self._timeout
         while True:
             elems = self.find_elements()
             if len(elems) > 0:
@@ -1177,21 +1179,21 @@ class Selector(object):
         """
         Set element wait timeout
         """
-        self.timeout = s
+        self._timeout = s
         return self
 
     def __getitem__(self, index):
-        self.index = index
+        self._index = index
         return self
 
     def child(self, *args, **kwargs):
         chain = self._gen_class_chain()
-        kwargs['parent_class_chains'] = self.parent_class_chains + [chain]
+        kwargs['parent_class_chains'] = self._parent_class_chains + [chain]
         return Selector(self.http, self.session, *args, **kwargs)
 
     @property
     def exists(self):
-        return len(self.find_element_ids()) > self.index
+        return len(self.find_element_ids()) > self._index
 
     def click_exists(self, timeout=0):
         """
@@ -1234,7 +1236,7 @@ class Selector(object):
         """
         start_time = time.time()
         if timeout is None or timeout <= 0:
-            timeout = self.timeout
+            timeout = self._timeout
         while start_time + timeout > time.time():
             if not self.exists:
                 return True
@@ -1263,17 +1265,17 @@ class Element(object):
         self._httpclient = session._session_http
 
     def __repr__(self):
-        return '<wda.Element(id="{}")>'.format(self.id)
+        return '<wda.Element(id="{}")>'.format(self._id)
     
     @cached_property
     def http(self):
         return self._httpclient
 
     def _req(self, method, url, data=None):
-        return self.http.fetch(method, '/element/' + self.id + url, data)
+        return self.http.fetch(method, '/element/' + self._id + url, data)
 
     def _wda_req(self, method, url, data=None):
-        return self.http.fetch(method, '/wda/element/' + self.id + url, data)
+        return self.http.fetch(method, '/wda/element/' + self._id + url, data)
 
     def _prop(self, key):
         return self._req('get', '/' + key.lstrip('/')).value
