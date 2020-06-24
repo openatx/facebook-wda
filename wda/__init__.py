@@ -193,7 +193,16 @@ class HTTPClient(object):
                           or self.error_callback, self.alert_callback)
 
     def fetch(self, method, url, data=None):
-        return self._fetch_with_autofix(method, url, data)
+        """
+        Raises:
+            WDAError
+        """
+        try:
+            return self._fetch_with_autofix(method, url, data)
+        except WDARequestError as e:
+            raise WDAError("Request failed: http {} {}".format(method.upper(), url), str(e))
+        except requests.ConnectionError as e:
+            raise WDAError("Failed to establish connection to to WDA")
 
     def _fetch_with_autofix(self, method, url, data=None, depth=0):
         target_url = urljoin(self.address, url)
@@ -586,8 +595,8 @@ class Client(object):
             self.http.alert_callback = None
 
     #Not working
-    #def get_clipboard(self):
-    #   self.http.post("/wda/getPasteboard").value
+    def get_clipboard(self):
+        return self.http.post("/wda/getPasteboard").value
 
     # Not working
     #def siri_activate(self, text):
@@ -1160,6 +1169,8 @@ class Selector(object):
                                           "timeout %.1f" % timeout)
 
     def __getattr__(self, oper):
+        if oper.startswith("_"):
+            raise AttributeError("invalid attr", oper)
         return getattr(self.get(), oper)
 
     def set_timeout(self, s):
