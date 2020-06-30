@@ -597,8 +597,8 @@ class Client(object):
             self.http.alert_callback = None
 
     #Not working
-    def get_clipboard(self):
-        return self.http.post("/wda/getPasteboard").value
+    #def get_clipboard(self):
+    #    return self.http.post("/wda/getPasteboard").value
 
     # Not working
     #def siri_activate(self, text):
