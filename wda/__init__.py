@@ -204,22 +204,19 @@ class HTTPClient(object):
         except requests.ConnectionError as e:
             raise WDAError("Failed to establish connection to to WDA")
 
-    def _fetch_with_autofix(self, method, url, data=None, depth=0):
+    def _fetch_with_autofix(self, method, url, data=None):
         target_url = urljoin(self.address, url)
         try:
             return httpdo(target_url, method, data)
         except WDARequestError as err:
-            if depth >= 10:
+            _callback = self.error_callback
+            try:
+                self.error_callback = None
+                if callable(_callback) and _callback(self, err):
+                    return httpdo(target_url, method, data)
                 raise
-            if callable(self.error_callback):
-                # handle error and then continue
-                ok = self.error_callback(self, err)
-                if ok:
-                    return self._fetch_with_autofix(method,
-                                                    url,
-                                                    data,
-                                                    depth=depth + 1)
-            raise
+            finally:
+                self.error_callback = _callback
 
     def __getattr__(self, key):
         """ Handle GET,POST,DELETE, etc ... """
