@@ -76,8 +76,10 @@ class WDAElementNotDisappearError(WDAError):
 
 
 class Status(enum.IntEnum):
+    # 不是怎么准确，status在mds平台上变来变去的
     INVALID_SESSION_ID = 10 # error: "invalid session id", "message": "Session does not exist"
     UNKNOWN = 100 # other status
+
 
 def convert(dictionary):
     """
@@ -498,10 +500,18 @@ class Client(object):
             return current_sid
         return self.session().id
 
-    def _invalid_session_err_callback(self, hc: HTTPClient, err):
+    def _invalid_session_err_callback(self, hc: HTTPClient, err: WDAError):
         if self.__is_app and self.__session_id:  # ignore when app is crashed
             return False
-        if err.status == Status.INVALID_SESSION_ID:
+        
+        should_reset_session_id = False
+        if isinstance(err, WDARequestError):
+            if "Session does not exist" in err.value:
+                should_reset_session_id = True
+            elif "possibly crashed" in err.value:
+                should_reset_session_id = True
+
+        if should_reset_session_id:
             # update session id and retry
             # print("Invalid session id,: update session url", self._id)
             self.__session_id = None
