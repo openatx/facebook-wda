@@ -480,6 +480,28 @@ s.alert.click("设置")
 s.alert.click(["设置", "信任", "安装"]) # when Arg type is list, click the first match, raise ValueError if no match
 ```
 
+### Callback
+回调操作: `register_callback`
+
+```python
+c = wda.Client()
+
+def _cb(client: wda.Client, url: str):
+	if url.endswith("/wda/keys"):
+		print("send_keys called")
+
+c.register_callback(wda.Callback.HTTP_REQUEST_BEFORE, _cb)
+c.send_keys("Hello")
+```
+
+支持的回调有
+
+```
+wda.Callback.HTTP_REQUEST_BEFORE
+wda.Callback.HTTP_REQUEST_AFTER
+wda.Callback.ERROR
+```
+
 ## TODO
 longTap not done pinch(not found in WDA)
 
@@ -499,7 +521,7 @@ s = wda.Client().session()
 def _alert_callback(session):
     session.alert.accept()
 
-s.set_alert_callback(_alert_callback)
+s.set_alert_callback(_alert_callback) # deprecated，此方法不能用了
 
 # do operations, when alert popup, it will auto accept
 s(type="Button").click()

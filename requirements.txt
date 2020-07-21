@@ -4,3 +4,4 @@ retry
 Pillow
 cached-property~=1.5.1
 attrdict~=2.0.1
+Deprecated~=1.2.6

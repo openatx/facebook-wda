@@ -15,6 +15,6 @@ def c():
     return wda.Client(__target)
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def app(c) -> wda.Client:
     return c.session('com.apple.Preferences')

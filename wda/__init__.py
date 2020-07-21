@@ -14,8 +14,9 @@ import re
 import threading
 import time
 from collections import defaultdict, namedtuple
-from typing import Union, Optional
+from typing import Union, Optional, Callable
 
+from deprecated import deprecated
 import attrdict
 import requests
 import retry
@@ -28,6 +29,7 @@ except ImportError:
 
 from . import xcui_element_types
 from . import requests_usbmux
+from .utils import inject_call
 
 urlparse = urllib.parse.urlparse
 _urljoin = urllib.parse.urljoin
@@ -77,8 +79,18 @@ class WDAElementNotDisappearError(WDAError):
 
 class Status(enum.IntEnum):
     # 不是怎么准确，status在mds平台上变来变去的
-    INVALID_SESSION_ID = 10 # error: "invalid session id", "message": "Session does not exist"
-    UNKNOWN = 100 # other status
+    INVALID_SESSION_ID = 10  # error: "invalid session id", "message": "Session does not exist"
+    UNKNOWN = 100  # other status
+
+
+class Callback(str, enum.Enum):
+    ERROR = "::error"
+    HTTP_REQUEST_BEFORE = "::http-request-before"
+    HTTP_REQUEST_AFTER = "::http-request-after"
+
+    RET_RETRY = "::retry"  # Callback return value
+    RET_ABORT = "::abort"
+    RET_CONTINUE = "::continue"
 
 
 def convert(dictionary):
@@ -101,8 +113,6 @@ def urljoin(*urls):
     This function fix that.
     """
     return '/'.join([u.strip("/") for u in urls])
-    #return reduce(_urljoin, [u.strip('/') + '/' for u in urls if u.strip('/')],
-    #              '').rstrip('/')
 
 
 def roundint(i):
@@ -119,9 +129,12 @@ def namedlock(name):
     return namedlock.locks[name]
 
 
-def httpdo(url, method="GET", data=None):
+def httpdo(url, method="GET", data=None) -> attrdict.AttrDict:
     """
     thread safe http request
+
+    Raises:
+        WDAError, WDARequestError, WDAEmptyResponseError
     """
     p = urlparse(url)
     with namedlock(p.scheme + "://" + p.netloc):
@@ -176,55 +189,9 @@ def _unsafe_httpdo(url, method='GET', data=None):
         if response.text == "":
             raise WDAEmptyResponseError(method, url, data)
         raise WDAError(method, url, response.text)
+    except requests.ConnectionError as e:
+        raise WDAError("Failed to establish connection to to WDA")
 
-
-class HTTPClient(object):
-    def __init__(self, address, error_callback=None, alert_callback=None):
-        """
-        Args:
-            address (string): url address eg: http://localhost:8100
-            error_callback (func): function to call when error occurs
-            alert_callback (func): function to call when alert popup
-        """
-        self.address = address.rstrip("/")
-        self.alert_callback = alert_callback
-        self.error_callback = error_callback
-
-    def new_client(self, path, error_callback=None):
-        return HTTPClient(self.address + '/' + path.lstrip('/'), error_callback
-                          or self.error_callback, self.alert_callback)
-
-    def fetch(self, method, url, data=None):
-        """
-        Raises:
-            WDAError
-        """
-        try:
-            return self._fetch_with_autofix(method, url, data)
-        except WDARequestError as e:
-            raise WDAError("Request failed: http {} {}".format(method.upper(), url), str(e))
-        except requests.ConnectionError as e:
-            raise WDAError("Failed to establish connection to to WDA")
-
-    def _fetch_with_autofix(self, method, url, data=None):
-        target_url = urljoin(self.address, url)
-        try:
-            return httpdo(target_url, method, data)
-        except WDARequestError as err:
-            _callback = self.error_callback
-            try:
-                self.error_callback = None
-                if callable(_callback) and _callback(self, err):
-                    return httpdo(target_url, method, data)
-                raise
-            finally:
-                self.error_callback = _callback
-
-    def __getattr__(self, key):
-        """ Handle GET,POST,DELETE, etc ... """
-        if key.startswith("_"):
-            raise AttributeError("Invalid attr", key)
-        return functools.partial(self.fetch, key)
 
 
 class Rect(list):
@@ -270,7 +237,7 @@ class Rect(list):
         return self.y + self.height
 
 
-class Client(object):
+class BaseClient(object):
     def __init__(self, url=None, _session_id=None):
         """
         Args:
@@ -282,13 +249,14 @@ class Client(object):
             url = os.environ.get('DEVICE_URL', 'http://localhost:8100')
         assert re.match(r"^(usbmux|https?)://", url), "Invalid URL: %r" % url
 
-        self.http = HTTPClient(url)
-
         # Session variable
+        self.__wda_url = url
         self.__session_id = _session_id
-        self.__is_app = bool(_session_id) # set to freeze session_id
+        self.__is_app = bool(_session_id)  # set to freeze session_id
         self.__timeout = 30.0
         self.__target = None
+        self.__callbacks = defaultdict(list)
+        self.__callback_depth = 0
 
     def wait_ready(self, timeout=120):
         """
@@ -312,6 +280,82 @@ class Client(object):
         res["value"]['sessionId'] = res.get("sessionId")
         # Can't use res.value['sessionId'] = ...
         return res.value
+
+    def register_callback(self, event_name: str, func: Callable):
+        self.__callbacks[event_name].append(func)
+
+    def unregister_callback(self, event_name: Optional[str] = None, func: Optional[Callable] = None):
+        """ 反注册 """
+        if event_name is None:
+            self.__callbacks.clear()
+        elif func is None:
+            self.__callbacks[event_name].clear()
+        else:
+            self.__callbacks[event_name].remove(func)
+
+    def _run_callback(self, event_name, callbacks,
+                      **kwargs) -> Union[None, Callback]:
+        """ 运行回调函数 """
+        if not callbacks:
+            return
+        for fn in callbacks[event_name]:
+            ret = inject_call(fn, **kwargs)
+            if ret in [
+                    Callback.RET_RETRY, Callback.RET_ABORT,
+                    Callback.RET_CONTINUE
+            ]:
+                return ret
+
+    def _fetch(self,
+               method: str,
+               urlpath: str,
+               data: Optional[dict] = None,
+               with_session: bool = False) -> attrdict.AttrDict:
+        """ do http request """
+        callbacks = None
+        if self.__callback_depth == 0:
+            callbacks = self.__callbacks
+        
+        self.__callback_depth += 1
+
+        if with_session:
+            urlpath = "/session/" + self._get_session_id() + urlpath
+
+        url = urljoin(self.__wda_url, urlpath)
+        run_callback = functools.partial(self._run_callback,
+                                         callbacks=callbacks,
+                                         method=method,
+                                         url=url,
+                                         data=data,
+                                         client=self)
+
+        try:
+            run_callback(Callback.HTTP_REQUEST_BEFORE)
+            response = httpdo(url, method, data)
+            run_callback(Callback.HTTP_REQUEST_AFTER, response=response)
+            return response
+        except WDARequestError as err:
+            ret = run_callback(Callback.ERROR, err=err)
+            if ret == Callback.RET_RETRY:
+                return self._fetch(method, urlpath, data, with_session)
+            elif ret == Callback.RET_CONTINUE:
+                return
+            else:
+                raise
+        finally:
+            self.__callback_depth -= 1
+
+    @property
+    def http(self):
+        return namedtuple("HTTPRequest", ['get', 'post'])(
+            functools.partial(self._fetch, "GET"),
+            functools.partial(self._fetch, "POST")) # yapf: disable
+
+    @property
+    def _session_http(self):
+        return namedtuple("HTTPSessionRequest", ['get', 'post'])(
+            functools.partial(self._fetch, "GET", with_session=True),
+            functools.partial(self._fetch, "POST", with_session=True)) # yapf: disable
 
     def home(self):
         """Press home button"""
@@ -337,7 +381,7 @@ class Client(object):
         """ unlock screen, double press home """
         return self.http.post('/wda/unlock')
 
-    def app_current(self):
+    def app_current(self) -> dict:
         """
         Returns:
             dict, eg:
@@ -396,6 +440,8 @@ class Client(object):
                 environment: Optional[dict] = None,
                 alert_action: Optional[str] = None):
         """
+        Launch app in a session
+
         Args:
             - bundle_id (str): the app bundle id
             - arguments (list): ['-u', 'https://www.google.com/ncr']
@@ -459,7 +505,8 @@ class Client(object):
 
         payload = {
             "capabilities": capabilities,
-            "desiredCapabilities": capabilities.get('alwaysMatch', {}),  # 兼容旧版的wda
+            "desiredCapabilities": capabilities.get('alwaysMatch',
+                                                    {}),  # 兼容旧版的wda
         }
 
         try:
@@ -471,7 +518,7 @@ class Client(object):
             res = self.session().app_state(bundle_id)
             if res.value != 4:
                 raise
-        return Client(self.http.address, _session_id=res.sessionId)
+        return Client(self.__wda_url, _session_id=res.sessionId)
 
     #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
     ######  Session methods and properties ######
@@ -496,34 +543,28 @@ class Client(object):
             return self.__session_id
         current_sid = self.status()['sessionId']
         if current_sid:
-            self.__session_id = current_sid # store old session id to reduce request count
+            self.__session_id = current_sid  # store old session id to reduce request count
             return current_sid
         return self.session().id
 
-    def _invalid_session_err_callback(self, hc: HTTPClient, err: WDAError):
-        if self.__is_app and self.__session_id:  # ignore when app is crashed
-            return False
-        
-        should_reset_session_id = False
-        if isinstance(err, WDARequestError):
-            if "Session does not exist" in err.value:
-                should_reset_session_id = True
-            elif "possibly crashed" in err.value:
-                should_reset_session_id = True
+    # def _invalid_session_err_callback(self, hc: HTTPClient, err: WDAError):
+    #     if self.__is_app and self.__session_id:  # ignore when app is crashed
+    #         return False
 
-        if should_reset_session_id:
-            # update session id and retry
-            # print("Invalid session id,: update session url", self._id)
-            self.__session_id = None
-            hc.address = self.http.address + "/session/" + self.id
-            return True
-        return False
+    #     should_reset_session_id = False
+    #     if isinstance(err, WDARequestError):
+    #         if "Session does not exist" in err.value:
+    #             should_reset_session_id = True
+    #         elif "possibly crashed" in err.value:
+    #             should_reset_session_id = True
 
-    @property
-    def _session_http(self) -> HTTPClient:
-        return self.http.new_client(
-            "session/" + self._get_session_id(),
-            error_callback=self._invalid_session_err_callback)
+    #     if should_reset_session_id:
+    #         # update session id and retry
+    #         # print("Invalid session id,: update session url", self._id)
+    #         self.__session_id = None
+    #         hc.address = self.http.address + "/session/" + self.id
+    #         return True
+    #     return False
 
     @cached_property
     def scale(self):
@@ -588,6 +629,7 @@ class Client(object):
                 "contentType": content_type
             })
 
+    @deprecated(version="0.10.0", reason="This method doing nothing now.")
     def set_alert_callback(self, callback):
         """
         Args:
@@ -598,10 +640,11 @@ class Client(object):
             def callback(session):
                 session.alert.accept()
         """
-        if callable(callback):
-            self.http.alert_callback = functools.partial(callback, self)
-        else:
-            self.http.alert_callback = None
+        pass
+        # if callable(callback):
+        #     self.http.alert_callback = functools.partial(callback, self)
+        # else:
+        #     self.http.alert_callback = None
 
     #Not working
     #def get_clipboard(self):
@@ -623,6 +666,7 @@ class Client(object):
             - enviroment (dict): {"KEY": "VAL"}
             - wait_for_quiescence (bool): default False
         """
+        # Deprecated, use app_start instead
         assert isinstance(arguments, (tuple, list))
         assert isinstance(environment, dict)
 
@@ -640,6 +684,7 @@ class Client(object):
         })
 
     def app_terminate(self, bundle_id):
+        # Deprecated, use app_stop instead
         return self._session_http.post("/wda/apps/terminate", {
             "bundleId": bundle_id,
         })
@@ -844,9 +889,11 @@ class Client(object):
         httpclient = self._session_http.new_client('')
         return Selector(httpclient, self, xpath=value)
 
-    @property
-    def alert(self):
-        return Alert(self)
+    def appium_settings(self, value: Optional[dict] = None) -> dict:
+        """
+        Get and set /session/$sessionId/appium/settings
+        """
+        return self._session_http.get("/appium/settings").value
 
     def close(self):  # close session
         return self._session_http.delete('/')
@@ -876,11 +923,8 @@ class Client(object):
                 "@taobao property requires wda_taobao library installed")
 
 
-Session = Client  # for compability
-
-
 class Alert(object):
-    def __init__(self, client):
+    def __init__(self, client: BaseClient):
         self._c = client
         self.http = client._session_http
 
@@ -930,6 +974,15 @@ class Alert(object):
             if bname in avaliable_names:
                 return self.http.post('/alert/accept', data={"name": bname})
         raise ValueError("Only these buttons can be clicked", avaliable_names)
+
+
+class Client(BaseClient):
+    @property
+    def alert(self) -> Alert:
+        return Alert(self)
+
+
+Session = Client  # for compability
 
 
 class Selector(object):
@@ -1273,7 +1326,7 @@ class Element(object):
 
     def __repr__(self):
         return '<wda.Element(id="{}")>'.format(self._id)
-    
+
     @cached_property
     def http(self):
         return self._httpclient
@@ -1398,7 +1451,7 @@ class Element(object):
     # def focused(self):
     #
     # def focuse(self):
-    
+
     def pickerwheel_select(self):
         """ Select by pickerwheel """
         # Ref: https://github.com/appium/WebDriverAgent/blob/e5d46a85fbdb22e401d396cedf0b5a9bbc995084/WebDriverAgentLib/Commands/FBElementCommands.m#L88
