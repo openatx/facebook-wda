@@ -486,6 +486,13 @@ s.alert.click(["设置", "信任", "安装"]) # when Arg type is list, click the
 ```python
 c = wda.Client()
 
+# the argument name in callback function can be one of
+# - client: wda.Client
+# - url: str
+# - method: str
+# - response: dict # Callback.HTTP_REQUEST_AFTER only 
+# - err: WDAError # Callback.ERROR only
+#
 def _cb(client: wda.Client, url: str):
 	if url.endswith("/wda/keys"):
 		print("send_keys called")
