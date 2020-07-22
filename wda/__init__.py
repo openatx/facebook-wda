@@ -47,8 +47,6 @@ PORTRAIT = 'PORTRAIT'
 LANDSCAPE_RIGHT = 'UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT'
 PORTRAIT_UPSIDEDOWN = 'UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN'
 
-alert_callback = None
-
 JSONDecodeError = json.decoder.JSONDecodeError if hasattr(
     json.decoder, "JSONDecodeError") else ValueError
 
@@ -252,9 +250,17 @@ class BaseClient(object):
                 return Callback.RET_ABORT
             return Callback.RET_RETRY
 
+    def _callback_tmq_before_send_keys(self, urlpath: str):
+        if urlpath.endswith("/wda/keys"):
+            if self.alert.exists:
+                self.alert.accept()
+            print("send_keys callback called")
+
     def _init_fix(self):
         self.register_callback(Callback.ERROR, self._callback_fix_invalid_session_id)
         self.register_callback(Callback.ERROR, self._callback_wait_ready)
+        if os.getenv("TMQ") == "true":
+            self.register_callback(Callback.HTTP_REQUEST_BEFORE, self._callback_tmq_before_send_keys)
 
     def wait_ready(self, timeout=120, noprint = False) -> bool:
         """
@@ -321,12 +327,13 @@ class BaseClient(object):
                data: Optional[dict] = None,
                with_session: bool = False) -> attrdict.AttrDict:
         """ do http request """
+        urlpath = "/" + urlpath.lstrip("/") # urlpath always startswith /
+
         callbacks = None
         if self.__callback_depth == 0:
             callbacks = self.__callbacks
 
         self.__callback_depth += 1
-
         url = urljoin(self.__wda_url, urlpath)
         run_callback = functools.partial(self._run_callback,
                                          callbacks=callbacks,
