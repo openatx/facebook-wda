@@ -81,6 +81,7 @@ def test_elememt_operation(c: wda.Client):
     print("alertButtons:", c.alert.buttons())
     print("alertClick:", c.alert.click("Dismiss"))
 
+
 if __name__ == "__main__":
     c = wda.USBClient()
     # c.healthcheck() # 恢复WDA状态

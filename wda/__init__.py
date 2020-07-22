@@ -9,29 +9,32 @@ import enum
 import functools
 import io
 import json
+import logging
 import os
 import re
 import threading
 import time
 from collections import defaultdict, namedtuple
-from typing import Union, Optional, Callable
+from typing import Callable, Optional, Union
 
-from deprecated import deprecated
 import attrdict
 import requests
 import retry
 import six
+from deprecated import deprecated
 from six.moves import urllib
+
+from . import requests_usbmux, xcui_element_types
+from .exceptions import *
+from .utils import inject_call
+
 try:
     from functools import cached_property  # Python3.8+
 except ImportError:
     from cached_property import cached_property
 
-from . import xcui_element_types
-from . import requests_usbmux
-from .utils import inject_call
-from .exceptions import *
 
+logger = logging.getLogger("facebook-wda")
 urlparse = urllib.parse.urlparse
 _urljoin = urllib.parse.urljoin
 
@@ -159,9 +162,9 @@ def _unsafe_httpdo(url, method='GET', data=None):
                 status = Status.INVALID_SESSION_ID
             else:
                 status = Status.ERROR
-            value = r.value.copy()
-            value.pop("traceback", None)
-            raise WDARequestError(status, attrdict.AttrDict(value))
+            # value = r.value.copy()
+            # value.pop("traceback", None)
+            raise WDARequestError(status, r.value)
         return r
     except JSONDecodeError:
         if response.text == "":
@@ -256,11 +259,19 @@ class BaseClient(object):
                 self.alert.accept()
             print("send_keys callback called")
 
+    def _callback_tmq_print_error(self, method, url, data, err):
+        logger.warning("HTTP Error happens, this message is printed for better debugging")
+        body = json.dumps(data) if data else ''
+        logger.warning("Shell$ curl -X {method} -d '{body}' '{url}'".format(
+            method=method.upper(), body=body or '', url=url))
+        logger.warning("Error: %s", err)
+
     def _init_fix(self):
         self.register_callback(Callback.ERROR, self._callback_fix_invalid_session_id)
         self.register_callback(Callback.ERROR, self._callback_wait_ready)
         if os.getenv("TMQ") == "true":
             self.register_callback(Callback.HTTP_REQUEST_BEFORE, self._callback_tmq_before_send_keys)
+            self.register_callback(Callback.ERROR, self._callback_tmq_print_error)
 
     def wait_ready(self, timeout=120, noprint = False) -> bool:
         """

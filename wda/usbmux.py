@@ -18,12 +18,12 @@ from functools import lru_cache
 from typing import Optional, Union
 
 from cached_property import cached_property
-from logzero import setup_logger
 
 from .exceptions import MuxConnectError, MuxError
 
+
 PROGRAM_NAME = "facebook-wda"
-logger = logging.getLogger("facebook-wda")
+logger = logging.getLogger(PROGRAM_NAME)
 
 
 class SafeStreamSocket():
