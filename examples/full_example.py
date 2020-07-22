@@ -43,11 +43,11 @@ def test_open_safari(c: wda.Client):
 
 
 def test_send_keys_callback(c: wda.Client):
-    def _handle_alert_before_send_keys(urlpath: str):
+    def _handle_alert_before_send_keys(client: wda.Client, urlpath: str):
         if not urlpath.endswith("/wda/keys"):
             return
-        if c.alert.exists:
-            c.alert.accept()
+        if client.alert.exists:
+            client.alert.accept()
         print("callback called")
 
     c.register_callback(wda.Callback.HTTP_REQUEST_BEFORE, _handle_alert_before_send_keys)
@@ -66,9 +66,25 @@ def test_error_callback(c: wda.Client):
     c.send_keys("hello callback")
 
 
+def test_elememt_operation(c: wda.Client):
+    c(label="DisplayAlert").exists
+    el = c(label="DisplayAlert").get()
+    print("accessible:", el.accessible)
+    print("accessibility_container:", el.accessibility_container)
+    print("enabled:", el.enabled)
+    print("visible:", el.visible)
+    print("label:", el.label)
+    print("className:", el.className)
+    el.click()
+
+    print("alertExists:", c.alert.exists)
+    print("alertButtons:", c.alert.buttons())
+    print("alertClick:", c.alert.click("Dismiss"))
+
 if __name__ == "__main__":
     c = wda.USBClient()
     # c.healthcheck() # 恢复WDA状态
-    test_wait_device_back_online(c)
+    # test_error_callback(c)
+    test_elememt_operation(c)
     # test_preferences(c)
     # test_open_safari(c)

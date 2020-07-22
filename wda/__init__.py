@@ -339,8 +339,7 @@ class BaseClient(object):
 
         try:
             if with_session:
-                url = urljoin(self.__wda_url,
-                              "/session/" + self.session_id + urlpath)
+                url = urljoin(self.__wda_url, "session", self.session_id, urlpath)
             run_callback(Callback.HTTP_REQUEST_BEFORE)
             response = httpdo(url, method, data)
             run_callback(Callback.HTTP_REQUEST_AFTER, response=response)
@@ -365,7 +364,8 @@ class BaseClient(object):
 
     @property
     def _session_http(self):
-        return namedtuple("HTTPSessionRequest", ['get', 'post'])(
+        return namedtuple("HTTPSessionRequest", ['fetch', 'get', 'post'])(
+            functools.partial(self._fetch, with_session=True),
             functools.partial(self._fetch, "GET", with_session=True),
             functools.partial(self._fetch, "POST", with_session=True)) # yapf: disable
 
@@ -571,25 +571,6 @@ class BaseClient(object):
     def _get_session_id(self) -> str:
         return self.session_id
 
-    # def _invalid_session_err_callback(self, hc: HTTPClient, err: WDAError):
-    #     if self.__is_app and self.__session_id:  # ignore when app is crashed
-    #         return False
-
-    #     should_reset_session_id = False
-    #     if isinstance(err, WDARequestError):
-    #         if "Session does not exist" in err.value:
-    #             should_reset_session_id = True
-    #         elif "possibly crashed" in err.value:
-    #             should_reset_session_id = True
-
-    #     if should_reset_session_id:
-    #         # update session id and retry
-    #         # print("Invalid session id,: update session url", self._id)
-    #         self.__session_id = None
-    #         hc.address = self.http.address + "/session/" + self.id
-    #         return True
-    #     return False
-
     @cached_property
     def scale(self):
         """
@@ -665,10 +646,6 @@ class BaseClient(object):
                 session.alert.accept()
         """
         pass
-        # if callable(callback):
-        #     self.http.alert_callback = functools.partial(callback, self)
-        # else:
-        #     self.http.alert_callback = None
 
     #Not working
     #def get_clipboard(self):
@@ -910,8 +887,7 @@ class BaseClient(object):
         """
         For weditor, d.xpath(...)
         """
-        httpclient = self._session_http.new_client('')
-        return Selector(httpclient, self, xpath=value)
+        return Selector(self.session, xpath=value)
 
     def appium_settings(self, value: Optional[dict] = None) -> dict:
         """
@@ -922,7 +898,7 @@ class BaseClient(object):
     def __call__(self, *args, **kwargs):
         if 'timeout' not in kwargs:
             kwargs['timeout'] = self.__timeout
-        return Selector(self._session_http, self, *args, **kwargs)
+        return Selector(self, *args, **kwargs)
 
     @property
     def alibaba(self):
@@ -1008,7 +984,6 @@ Session = Client  # for compability
 
 class Selector(object):
     def __init__(self,
-                 httpclient,
                  session: Session,
                  predicate=None,
                  id=None,
@@ -1085,8 +1060,7 @@ class Selector(object):
             wdValue,
             wdVisible
         '''
-        self.http = httpclient
-        self.session = session
+        self._session = session
 
         self._predicate = predicate
         self._id = id
@@ -1118,6 +1092,10 @@ class Selector(object):
                     '$') and not self._name_regex.endswith('.*'):
                 self._name_regex = self._name_regex + '.*'
         self._parent_class_chains = parent_class_chains
+
+    @property
+    def http(self):
+        return self._session._session_http
 
     def _fix_xcui_type(self, s):
         if s is None:
@@ -1216,7 +1194,7 @@ class Selector(object):
         """
         es = []
         for element_id in self.find_element_ids():
-            e = Element(self.session, element_id)
+            e = Element(self._session, element_id)
             es.append(e)
         return es
 
@@ -1270,7 +1248,7 @@ class Selector(object):
     def child(self, *args, **kwargs):
         chain = self._gen_class_chain()
         kwargs['parent_class_chains'] = self._parent_class_chains + [chain]
-        return Selector(self.http, self.session, *args, **kwargs)
+        return Selector(self._session, *args, **kwargs)
 
     @property
     def exists(self):
@@ -1343,14 +1321,13 @@ class Element(object):
         """
         self._session = session
         self._id = id
-        self._httpclient = session._session_http
 
     def __repr__(self):
         return '<wda.Element(id="{}")>'.format(self._id)
 
-    @cached_property
+    @property
     def http(self):
-        return self._httpclient
+        return self._session._session_http
 
     def _req(self, method, url, data=None):
         return self.http.fetch(method, '/element/' + self._id + url, data)
@@ -1362,7 +1339,7 @@ class Element(object):
         return self._req('get', '/' + key.lstrip('/')).value
 
     def _wda_prop(self, key):
-        ret = self._request('GET', 'wda/element/%s/%s' % (self._id, key)).value
+        ret = self.http.get('/wda/element/%s/%s' % (self._id, key)).value
         return ret
 
     @property

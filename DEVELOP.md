@@ -7,6 +7,10 @@ cd tests
 py.test -vv
 ```
 
+# 已知问题
+- iOS 13.5
+  顶部有通知栏时，alert操作不了
+
 # HTTP Request
 ```
 $ http GET $DEVICE_URL/HEALTH
