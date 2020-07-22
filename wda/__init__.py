@@ -30,6 +30,7 @@ except ImportError:
 from . import xcui_element_types
 from . import requests_usbmux
 from .utils import inject_call
+from .exceptions import *
 
 urlparse = urllib.parse.urlparse
 _urljoin = urllib.parse.urljoin
@@ -39,6 +40,7 @@ if six.PY3:
 
 DEBUG = False
 HTTP_TIMEOUT = 60.0  # unit second
+DEVICE_WAIT_TIMEOUT = 30.0 # wait ready
 
 LANDSCAPE = 'LANDSCAPE'
 PORTRAIT = 'PORTRAIT'
@@ -51,36 +53,11 @@ JSONDecodeError = json.decoder.JSONDecodeError if hasattr(
     json.decoder, "JSONDecodeError") else ValueError
 
 
-class WDAError(Exception):
-    """ base wda error """
-
-
-class WDARequestError(WDAError):
-    def __init__(self, status, value):
-        self.status = status
-        self.value = value
-
-    def __str__(self):
-        return 'WDARequestError(status=%d, value=%s)' % (self.status,
-                                                         self.value)
-
-
-class WDAEmptyResponseError(WDAError):
-    """ response body is empty """
-
-
-class WDAElementNotFoundError(WDAError):
-    """ element not found """
-
-
-class WDAElementNotDisappearError(WDAError):
-    """ element not disappera """
-
-
 class Status(enum.IntEnum):
     # 不是怎么准确，status在mds平台上变来变去的
     INVALID_SESSION_ID = 10  # error: "invalid session id", "message": "Session does not exist"
     UNKNOWN = 100  # other status
+    ERROR = 110
 
 
 class Callback(str, enum.Enum):
@@ -153,7 +130,7 @@ def _unsafe_httpdo(url, method='GET', data=None):
     start = time.time()
     if DEBUG:
         body = json.dumps(data) if data else ''
-        print("Shell: curl -X {method} -d '{body}' '{url}'".format(
+        print("Shell$ curl -X {method} -d '{body}' '{url}'".format(
             method=method.upper(), body=body or '', url=url))
 
     try:
@@ -178,12 +155,15 @@ def _unsafe_httpdo(url, method='GET', data=None):
         if r.status != 0:
             raise WDARequestError(r.status, r.value)
         if isinstance(r.value, dict) and r.value.get("error"):
-            err = r.value['error']
-            if err == "invalid session id":
+            error = r.value['error']
+            if error == "invalid session id" or "possibly crashed" in r.value.get(
+                    'message', ''):
                 status = Status.INVALID_SESSION_ID
             else:
-                status = Status.UNKNOWN
-            raise WDARequestError(status, err)
+                status = Status.ERROR
+            value = r.value.copy()
+            value.pop("traceback", None)
+            raise WDARequestError(status, attrdict.AttrDict(value))
         return r
     except JSONDecodeError:
         if response.text == "":
@@ -191,7 +171,6 @@ def _unsafe_httpdo(url, method='GET', data=None):
         raise WDAError(method, url, response.text)
     except requests.ConnectionError as e:
         raise WDAError("Failed to establish connection to to WDA")
-
 
 
 class Rect(list):
@@ -257,8 +236,27 @@ class BaseClient(object):
         self.__target = None
         self.__callbacks = defaultdict(list)
         self.__callback_depth = 0
+        self._init_fix()
 
-    def wait_ready(self, timeout=120):
+    def _callback_fix_invalid_session_id(self, err: WDAError):
+        """ 当遇到 invalid session id错误时，更新session id并重试 """
+        if isinstance(err, WDARequestError) and \
+                err.status == Status.INVALID_SESSION_ID and err.value.error == "invalid session id":
+            self.session_id = None
+            return Callback.RET_RETRY
+
+    def _callback_wait_ready(self, err):
+        """ 等待设备恢复上线 """
+        if isinstance(err, (ConnectionError, requests.ConnectionError)):
+            if not self.wait_ready(DEVICE_WAIT_TIMEOUT): # 等待设备恢复在线
+                return Callback.RET_ABORT
+            return Callback.RET_RETRY
+
+    def _init_fix(self):
+        self.register_callback(Callback.ERROR, self._callback_fix_invalid_session_id)
+        self.register_callback(Callback.ERROR, self._callback_wait_ready)
+
+    def wait_ready(self, timeout=120, noprint = False) -> bool:
         """
         wait until WDA back to normal
 
@@ -266,12 +264,21 @@ class BaseClient(object):
             bool (if wda works)
         """
         deadline = time.time() + timeout
+        def _dprint(message: str):
+            if noprint:
+                return
+            print(message)
+        
+        _dprint("Wait ready (timeout={:.1f})".format(timeout))
         while time.time() < deadline:
             try:
                 self.status()
+                _dprint("device back online")
                 return True
             except:
-                time.sleep(2)
+                _dprint("wait_ready left {:.1f} seconds".format(deadline - time.time()))
+                time.sleep(1.0)
+        _dprint("device still offline")
         return False
 
     @retry.retry(exceptions=WDAEmptyResponseError, tries=3, delay=2)
@@ -284,7 +291,9 @@ class BaseClient(object):
     def register_callback(self, event_name: str, func: Callable):
         self.__callbacks[event_name].append(func)
 
-    def unregister_callback(self, event_name: Optional[str] = None, func: Optional[Callable] = None):
+    def unregister_callback(self,
+                            event_name: Optional[str] = None,
+                            func: Optional[Callable] = None):
         """ 反注册 """
         if event_name is None:
             self.__callbacks.clear()
@@ -315,26 +324,29 @@ class BaseClient(object):
         callbacks = None
         if self.__callback_depth == 0:
             callbacks = self.__callbacks
-        
-        self.__callback_depth += 1
 
-        if with_session:
-            urlpath = "/session/" + self._get_session_id() + urlpath
+        self.__callback_depth += 1
 
         url = urljoin(self.__wda_url, urlpath)
         run_callback = functools.partial(self._run_callback,
                                          callbacks=callbacks,
                                          method=method,
                                          url=url,
+                                         urlpath=urlpath,
+                                         with_session=with_session,
                                          data=data,
                                          client=self)
 
         try:
+            if with_session:
+                url = urljoin(self.__wda_url,
+                              "/session/" + self.session_id + urlpath)
             run_callback(Callback.HTTP_REQUEST_BEFORE)
             response = httpdo(url, method, data)
             run_callback(Callback.HTTP_REQUEST_AFTER, response=response)
             return response
-        except WDARequestError as err:
+        except (WDARequestError, ConnectionError,
+                requests.ConnectionError) as err:
             ret = run_callback(Callback.ERROR, err=err)
             if ret == Callback.RET_RETRY:
                 return self._fetch(method, urlpath, data, with_session)
@@ -482,12 +494,12 @@ class BaseClient(object):
 
         Or {"capabilities": {}}
         """
-        if not bundle_id:
-            # 旧版的WDA创建Session不允许bundleId为空，但是总是可以拿到sessionId
-            # 新版的WDA允许bundleId为空，但是初始状态没有sessionId
-            session_id = self.status().get("sessionId")
-            if session_id:
-                return self
+        # if not bundle_id:
+        #     # 旧版的WDA创建Session不允许bundleId为空，但是总是可以拿到sessionId
+        #     # 新版的WDA允许bundleId为空，但是初始状态没有sessionId
+        #     session_id = self.status().get("sessionId")
+        #     if session_id:
+        #         return self
 
         capabilities = {}
         if bundle_id:
@@ -520,6 +532,9 @@ class BaseClient(object):
                 raise
         return Client(self.__wda_url, _session_id=res.sessionId)
 
+    def close(self):  # close session
+        return self._session_http.delete('/')
+
     #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
     ######  Session methods and properties ######
     #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
@@ -535,17 +550,26 @@ class BaseClient(object):
         self.close()
 
     @property
+    @deprecated(version="1.0.0", reason="Use session_id instread id")
     def id(self):
         return self._get_session_id()
 
-    def _get_session_id(self) -> str:
+    @property
+    def session_id(self) -> str:
         if self.__session_id:
             return self.__session_id
         current_sid = self.status()['sessionId']
         if current_sid:
             self.__session_id = current_sid  # store old session id to reduce request count
             return current_sid
-        return self.session().id
+        return self.session().session_id
+
+    @session_id.setter
+    def session_id(self, value):
+        self.__session_id = value
+
+    def _get_session_id(self) -> str:
+        return self.session_id
 
     # def _invalid_session_err_callback(self, hc: HTTPClient, err: WDAError):
     #     if self.__is_app and self.__session_id:  # ignore when app is crashed
@@ -629,7 +653,7 @@ class BaseClient(object):
                 "contentType": content_type
             })
 
-    @deprecated(version="0.10.0", reason="This method doing nothing now.")
+    @deprecated(version="1.0.0", reason="This method is deprecated now.")
     def set_alert_callback(self, callback):
         """
         Args:
@@ -894,9 +918,6 @@ class BaseClient(object):
         Get and set /session/$sessionId/appium/settings
         """
         return self._session_http.get("/appium/settings").value
-
-    def close(self):  # close session
-        return self._session_http.delete('/')
 
     def __call__(self, *args, **kwargs):
         if 'timeout' not in kwargs:

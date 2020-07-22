@@ -6,3 +6,23 @@ export DEVICE_URL="http://localhost:8100"
 cd tests
 py.test -vv
 ```
+
+# HTTP Request
+```
+$ http GET $DEVICE_URL/HEALTH
+I-AM-ALIVE
+
+$ curl -X POST -d '{"name": "home"}' 'http://localhost:8100/session/024A4577-2105-4E0C-9623-D683CDF9707E/wda/pressButton'
+Return (47ms): {
+  "status" : 0,
+  "sessionId" : "024A4577-2105-4E0C-9623-D683CDF9707E",
+  "value" : null
+}
+
+$ curl -X POST -d '{"value": ["h", "e", "l", "l", "o"]}' 'http://localhost:8100/session/024A4577-2105-4E0C-9623-D683CDF9707E/wda/keys'
+{
+  "status" : 0,
+  "sessionId" : "024A4577-2105-4E0C-9623-D683CDF9707E",
+  "value" : null
+}
+```

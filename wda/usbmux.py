@@ -20,16 +20,10 @@ from typing import Optional, Union
 from cached_property import cached_property
 from logzero import setup_logger
 
+from .exceptions import MuxConnectError, MuxError
+
 PROGRAM_NAME = "facebook-wda"
 logger = logging.getLogger("facebook-wda")
-
-
-class MuxError(Exception):
-    """ Mutex error """
-
-
-class MuxConnectError(MuxError):
-    """ Error when MessageType: Connect """
 
 
 class SafeStreamSocket():
@@ -200,7 +194,7 @@ class Usbmux:
 
 
 class Device(object):
-    def __init__(self, udid: str, _usbmux = None):
+    def __init__(self, udid: str, _usbmux=None):
         assert udid, "udid should not empty"
         self._usbmux = _usbmux or Usbmux()
         self._udid = udid
@@ -220,15 +214,15 @@ class Device(object):
         for dinfo in self._usbmux.device_list():
             if dinfo['SerialNumber'] == self._udid:
                 return dinfo
-        
+
         raise MuxError("Device {} not connected".format(self._udid))
 
     def create_inner_connection(self, port: int = 0xf27e) -> PlistSocket:
         # I really donot know why do this
         # The following code convert port(0x1234) to port(0x3412)
         _port = ((port & 0xff) << 8) | (port >> 8)
-        logger.debug("port convert %s(%d) -> %s(%d)", 
-                     hex(port), port, hex(_port), _port)
+        logger.debug("port convert %s(%d) -> %s(%d)", hex(port), port,
+                     hex(_port), _port)
         _original_port = port
         del (port)
 
@@ -246,7 +240,8 @@ class Device(object):
         if 'Number' in data and data['Number'] != 0:
             err_code = data['Number']
             if err_code == 3:
-                raise MuxConnectError("device port:{} is not ready".format(_original_port))
+                raise MuxConnectError(
+                    "device port:{} is not ready".format(_original_port))
             else:
                 raise MuxError(data)
         logger.debug("connection established")

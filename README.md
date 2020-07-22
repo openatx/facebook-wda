@@ -99,21 +99,25 @@ A `wda.WDAError` will be raised if communite with WDA went wrong.
 
 class `USBClient` inherit from `Client`
 
-If WebDriverAgent running on your **mac**, you can connect through `unix:/var/run/usbmuxd`
+USBClient connect to wda-server through `unix:/var/run/usbmuxd`
 
 ```python
 import wda
 
 # 如果只有一个设备也可以简写为
+# If there is only one iPhone connecttd
 c = wda.USBClient()
 
 # 支持指定设备的udid，和WDA的端口号
-c = wda.USBClient("539c5fffb18f2be0bf7f771d68f7c327fb68d2d9", port=12121)
+# Specify udid and WDA port
+c = wda.USBClient("539c5fffb18f2be0bf7f771d68f7c327fb68d2d9", port=8100)
 
 # 也支持通过DEVICE_URL访问
 c = wda.Client("usbmux://{udid}:8100".format(udid="539c5fffb18f2be0bf7f771d68f7c327fb68d2d9"))
 print(c.window_size())
 ```
+
+看到这里，可以看 [examples](examples) 目录下的一些代码了 
 
 ### Client
 
@@ -123,6 +127,7 @@ print c.status()
 
 # Wait WDA ready
 c.wait_ready(timeout=300) # 等待300s，默认120s
+c.wait_ready(timeout=300, noprint=True) # 安静的等待，无进度输出
 
 # Press home button
 c.home()
@@ -218,10 +223,6 @@ s.locked() # locked status, true or false
 s.battery_info() # return like {"level": 1, "state": 2}
 s.device_info() # return like {"currentLocale": "zh_CN", "timeZone": "Asia/Shanghai"}
 
-s.app_current() # current app info
-# return example
-# {"pid": 1281, "name": "", "bundleId": "com.netease.cloudmusic"}
-
 s.set_clipboard("Hello world") # update clipboard
 # s.get_clipboard() # Not working now
 
@@ -277,7 +278,7 @@ s.swipe_down()
 s.tap_hold(x, y, 1.0)
 
 # Hide keyboard (not working in simulator), did not success using latest WDA
-s.keyboard_dismiss()
+# s.keyboard_dismiss()
 
 # press home, volumeUp, volumeDown
 s.press("home") # fater then s.home()
@@ -488,8 +489,10 @@ c = wda.Client()
 
 # the argument name in callback function can be one of
 # - client: wda.Client
-# - url: str
-# - method: str
+# - url: str, eg: http://localhost:8100/session/024A4577-2105-4E0C-9623-D683CDF9707E/wda/keys
+# - urlpath: str, eg: /wda/keys  (without session id)
+# - with_session: bool # if url contains session id
+# - method: str, eg: GET
 # - response: dict # Callback.HTTP_REQUEST_AFTER only 
 # - err: WDAError # Callback.ERROR only
 #
@@ -499,6 +502,11 @@ def _cb(client: wda.Client, url: str):
 
 c.register_callback(wda.Callback.HTTP_REQUEST_BEFORE, _cb)
 c.send_keys("Hello")
+
+# unregister
+c.unregister_callback(wda.Callback.HTTP_REQUEST_BEFORE, _cb)
+c.unregister_callback(wda.Callback.HTTP_REQUEST_BEFORE) # ungister all
+c.unregister_callback() # unregister all callbacks
 ```
 
 支持的回调有
@@ -508,6 +516,11 @@ wda.Callback.HTTP_REQUEST_BEFORE
 wda.Callback.HTTP_REQUEST_AFTER
 wda.Callback.ERROR
 ```
+
+默认代码内置了两个回调函数 `wda.Callback.ERROR`，使用`c.unregister_callback(wda.Callback.ERROR)`可以去掉这两个回调
+
+- 当遇到`invalid session id`错误时，更新session id并重试
+- 当遇到设备掉线时，等待`wda.DEVICE_WAIT_TIMEOUT`时间 (当前是30s，以后可能会改的更长一些)
 
 ## TODO
 longTap not done pinch(not found in WDA)
