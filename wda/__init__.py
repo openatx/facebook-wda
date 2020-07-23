@@ -379,16 +379,18 @@ class BaseClient(object):
 
     @property
     def http(self):
-        return namedtuple("HTTPRequest", ['get', 'post'])(
+        return namedtuple("HTTPRequest", ['fetch', 'get', 'post'])(
+            self._fetch,
             functools.partial(self._fetch, "GET"),
             functools.partial(self._fetch, "POST")) # yapf: disable
 
     @property
     def _session_http(self):
-        return namedtuple("HTTPSessionRequest", ['fetch', 'get', 'post'])(
+        return namedtuple("HTTPSessionRequest", ['fetch', 'get', 'post', 'delete'])(
             functools.partial(self._fetch, with_session=True),
             functools.partial(self._fetch, "GET", with_session=True),
-            functools.partial(self._fetch, "POST", with_session=True)) # yapf: disable
+            functools.partial(self._fetch, "POST", with_session=True),
+            functools.partial(self._fetch, "DELETE", with_session=True)) # yapf: disable
 
     def home(self):
         """Press home button"""
