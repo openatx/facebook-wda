@@ -82,10 +82,15 @@ def test_elememt_operation(c: wda.Client):
     print("alertClick:", c.alert.click("Dismiss"))
 
 
+def test_xpath(c: wda.Client):
+    c.xpath("//Window/Other/Other").exists
+
+
 if __name__ == "__main__":
     c = wda.USBClient()
     # c.healthcheck() # 恢复WDA状态
     # test_error_callback(c)
-    test_elememt_operation(c)
+    # test_elememt_operation(c)
     # test_preferences(c)
     # test_open_safari(c)
+    test_xpath(c)

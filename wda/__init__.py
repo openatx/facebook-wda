@@ -37,6 +37,7 @@ except ImportError:
 logger = logging.getLogger("facebook-wda")
 urlparse = urllib.parse.urlparse
 _urljoin = urllib.parse.urljoin
+_is_tmq = os.getenv("TMQ") == "true"
 
 if six.PY3:
     from functools import reduce
@@ -269,7 +270,9 @@ class BaseClient(object):
     def _init_fix(self):
         self.register_callback(Callback.ERROR, self._callback_fix_invalid_session_id)
         self.register_callback(Callback.ERROR, self._callback_wait_ready)
-        if os.getenv("TMQ") == "true":
+        if _is_tmq:
+            # 输入之前处理弹窗
+            # 出现错误是print出来，方便调试
             self.register_callback(Callback.HTTP_REQUEST_BEFORE, self._callback_tmq_before_send_keys)
             self.register_callback(Callback.ERROR, self._callback_tmq_print_error)
 
@@ -768,6 +771,8 @@ class BaseClient(object):
                                        dict(duration=duration))
 
     def tap(self, x, y):
+        #if _is_tmq:
+        #    return self.http.post("/mds/touchAndHold", dict(x=x, y=y, duration=0.02))
         return self._session_http.post('/wda/tap/0', dict(x=x, y=y))
 
     def _percent2pos(self, x, y, window_size=None):
@@ -901,17 +906,17 @@ class BaseClient(object):
         raise RuntimeError("not pass tests, this method is not allowed to use")
         self._session_http.post('/wda/keyboard/dismiss')
 
-    def xpath(self, value):
-        """
-        For weditor, d.xpath(...)
-        """
-        return Selector(self.session, xpath=value)
-
     def appium_settings(self, value: Optional[dict] = None) -> dict:
         """
         Get and set /session/$sessionId/appium/settings
         """
         return self._session_http.get("/appium/settings").value
+
+    def xpath(self, value):
+        """
+        For weditor, d.xpath(...)
+        """
+        return Selector(self, xpath=value)
 
     def __call__(self, *args, **kwargs):
         if 'timeout' not in kwargs:
@@ -1078,6 +1083,7 @@ class Selector(object):
             wdValue,
             wdVisible
         '''
+        assert isinstance(session, Session)
         self._session = session
 
         self._predicate = predicate
@@ -1250,7 +1256,10 @@ class Selector(object):
     def __getattr__(self, oper):
         if oper.startswith("_"):
             raise AttributeError("invalid attr", oper)
-        return getattr(self.get(), oper)
+        el = self.get()
+        if not hasattr(el, oper):
+            raise AttributeError("invalid attr", oper)
+        return getattr(el, oper)
 
     def set_timeout(self, s):
         """
