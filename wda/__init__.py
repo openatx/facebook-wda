@@ -1249,7 +1249,7 @@ class Selector(object):
                 return elems[0]
             if start_time + timeout < time.time():
                 break
-            time.sleep(0.01)
+            time.sleep(0.1)
 
         if raise_error:
             raise WDAElementNotFoundError("element not found",
