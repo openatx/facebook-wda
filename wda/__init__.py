@@ -27,6 +27,7 @@ from six.moves import urllib
 from . import requests_usbmux, xcui_element_types
 from .exceptions import *
 from .utils import inject_call
+from ._proto import *
 
 try:
     from functools import cached_property  # Python3.8+
@@ -70,6 +71,7 @@ class Callback(str, enum.Enum):
     RET_RETRY = "::retry"  # Callback return value
     RET_ABORT = "::abort"
     RET_CONTINUE = "::continue"
+
 
 
 def convert(dictionary):
@@ -125,6 +127,17 @@ def _requests_session_pool_get(scheme, netloc):
     return requests_usbmux.Session()
 
 
+def _is_session_id_error(value: Union[str, dict]):
+    if isinstance(value, dict): # 新版WDA逻辑
+        error = value['error']
+        if error == "invalid session id" or "possibly crashed" in value.get('message', ''):
+            return True
+    elif isinstance(value, str): # 旧版WDA中的value就是字符串
+        if "invalid session id" in value or "possibly crashed" in value:
+            return True
+    return False
+
+
 def _unsafe_httpdo(url, method='GET', data=None):
     """
     Do HTTP Request
@@ -154,18 +167,20 @@ def _unsafe_httpdo(url, method='GET', data=None):
         retjson = response.json()
         retjson['status'] = retjson.get('status', 0)
         r = convert(retjson)
-        if r.status != 0:
+
+        if r.status != 0: # in new WDA, status is always 0
+            if _is_session_id_error(r.value):
+                r['status'] = Status.INVALID_SESSION_ID
             raise WDARequestError(r.status, r.value)
+
         if isinstance(r.value, dict) and r.value.get("error"):
-            error = r.value['error']
-            if error == "invalid session id" or "possibly crashed" in r.value.get(
-                    'message', ''):
+            if _is_session_id_error(r.value):
                 status = Status.INVALID_SESSION_ID
             else:
                 status = Status.ERROR
-            # value = r.value.copy()
-            # value.pop("traceback", None)
-            raise WDARequestError(status, r.value)
+            value = r.value.copy()
+            value.pop("traceback", None)
+            raise WDARequestError(status, value)
         return r
     except JSONDecodeError:
         if response.text == "":
@@ -243,7 +258,8 @@ class BaseClient(object):
     def _callback_fix_invalid_session_id(self, err: WDAError):
         """ 当遇到 invalid session id错误时，更新session id并重试 """
         if isinstance(err, WDARequestError) and \
-                err.status == Status.INVALID_SESSION_ID and err.value.error == "invalid session id":
+                err.status == Status.INVALID_SESSION_ID: # and not self.__is_app:
+            self.close()
             self.session_id = None
             return Callback.RET_RETRY
 
@@ -273,6 +289,7 @@ class BaseClient(object):
         if _is_tmq:
             # 输入之前处理弹窗
             # 出现错误是print出来，方便调试
+            logger.info("register callbacks for tmq")
             self.register_callback(Callback.HTTP_REQUEST_BEFORE, self._callback_tmq_before_send_keys)
             self.register_callback(Callback.ERROR, self._callback_tmq_print_error)
 
@@ -334,6 +351,10 @@ class BaseClient(object):
                     Callback.RET_CONTINUE
             ]:
                 return ret
+
+    @property
+    def callbacks(self):
+        return self.__callbacks
 
     def _fetch(self,
                method: str,
@@ -473,7 +494,7 @@ class BaseClient(object):
                 bundle_id=None,
                 arguments: Optional[list] = None,
                 environment: Optional[dict] = None,
-                alert_action: Optional[str] = None):
+                alert_action: Optional[AlertAction] = None):
         """
         Launch app in a session
 
@@ -481,7 +502,7 @@ class BaseClient(object):
             - bundle_id (str): the app bundle id
             - arguments (list): ['-u', 'https://www.google.com/ncr']
             - enviroment (dict): {"KEY": "VAL"}
-            - alert_action (str): "accept" or "dismiss"
+            - alert_action (AlertAction): AlertAction.ACCEPT or AlertAction.DISMISS
 
         WDA Return json like
 
@@ -556,7 +577,11 @@ class BaseClient(object):
         return Client(self.__wda_url, _session_id=res.sessionId)
 
     def close(self):  # close session
-        return self._session_http.delete('/')
+        try:
+            return self._session_http.delete('/')
+        except WDARequestError as e:
+            if e.status != Status.INVALID_SESSION_ID:
+                raise
 
     #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
     ######  Session methods and properties ######
@@ -912,7 +937,11 @@ class BaseClient(object):
         """
         Get and set /session/$sessionId/appium/settings
         """
-        return self._session_http.get("/appium/settings").value
+        if value is None:
+            return self._session_http.get("/appium/settings").value
+        return self._session_http.post("/appium/settings", data={
+            "settings": value
+        }).value
 
     def xpath(self, value):
         """

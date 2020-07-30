@@ -153,6 +153,9 @@ c.screenshot("screen.jpg") # Bad
 
 # convert to PIL.Image and then save as jpg
 c.screenshot().save("screen.jpg") # Good
+
+c.appium_settings() # 获取appium的配置
+c.appium_settings({"mjpegServerFramerate": 20}) # 修改配置
 ```
 
 ### Session

@@ -86,6 +86,14 @@ def test_xpath(c: wda.Client):
     c.xpath("//Window/Other/Other").exists
 
 
+
+def test_invalid_session(c: wda.Client):
+    app = c.session("com.apple.Preferences")
+    # kill app here
+    app.session_id = "no-exists"
+    app(label="Haha").exists
+
+
 if __name__ == "__main__":
     c = wda.USBClient()
     # c.healthcheck() # 恢复WDA状态
@@ -93,4 +101,6 @@ if __name__ == "__main__":
     # test_elememt_operation(c)
     # test_preferences(c)
     # test_open_safari(c)
-    test_xpath(c)
+    # test_xpath(c)
+    wda.DEBUG = True
+    test_invalid_session(c)
