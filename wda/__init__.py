@@ -16,6 +16,7 @@ import threading
 import time
 from collections import defaultdict, namedtuple
 from typing import Callable, Optional, Union
+from urllib.parse import urlparse
 
 import attrdict
 import requests
@@ -25,27 +26,20 @@ from deprecated import deprecated
 from six.moves import urllib
 
 from . import requests_usbmux, xcui_element_types
+from ._proto import *
 from .exceptions import *
 from .utils import inject_call
-from ._proto import *
 
 try:
     from functools import cached_property  # Python3.8+
 except ImportError:
     from cached_property import cached_property
 
-
-logger = logging.getLogger("facebook-wda")
-urlparse = urllib.parse.urlparse
-_urljoin = urllib.parse.urljoin
-_is_tmq = os.getenv("TMQ") == "true"
-
-if six.PY3:
-    from functools import reduce
+logger = logging.getLogger("facebook-wda")  # default level: WARNING
 
 DEBUG = False
 HTTP_TIMEOUT = 60.0  # unit second
-DEVICE_WAIT_TIMEOUT = 30.0 # wait ready
+DEVICE_WAIT_TIMEOUT = 30.0  # wait ready
 
 LANDSCAPE = 'LANDSCAPE'
 PORTRAIT = 'PORTRAIT'
@@ -71,7 +65,6 @@ class Callback(str, enum.Enum):
     RET_RETRY = "::retry"  # Callback return value
     RET_ABORT = "::abort"
     RET_CONTINUE = "::continue"
-
 
 
 def convert(dictionary):
@@ -127,12 +120,17 @@ def _requests_session_pool_get(scheme, netloc):
     return requests_usbmux.Session()
 
 
+def _is_tmq_platform() -> bool:
+    return os.getenv("TMQ") == "true"
+
+
 def _is_session_id_error(value: Union[str, dict]):
-    if isinstance(value, dict): # 新版WDA逻辑
+    if isinstance(value, dict):  # 新版WDA逻辑
         error = value['error']
-        if error == "invalid session id" or "possibly crashed" in value.get('message', ''):
+        if error == "invalid session id" or "possibly crashed" in value.get(
+                'message', ''):
             return True
-    elif isinstance(value, str): # 旧版WDA中的value就是字符串
+    elif isinstance(value, str):  # 旧版WDA中的value就是字符串
         if "invalid session id" in value or "possibly crashed" in value:
             return True
     return False
@@ -168,7 +166,7 @@ def _unsafe_httpdo(url, method='GET', data=None):
         retjson['status'] = retjson.get('status', 0)
         r = convert(retjson)
 
-        if r.status != 0: # in new WDA, status is always 0
+        if r.status != 0:  # in new WDA, status is always 0
             if _is_session_id_error(r.value):
                 r['status'] = Status.INVALID_SESSION_ID
             raise WDARequestError(r.status, r.value)
@@ -266,7 +264,7 @@ class BaseClient(object):
     def _callback_wait_ready(self, err):
         """ 等待设备恢复上线 """
         if isinstance(err, (ConnectionError, requests.ConnectionError)):
-            if not self.wait_ready(DEVICE_WAIT_TIMEOUT): # 等待设备恢复在线
+            if not self.wait_ready(DEVICE_WAIT_TIMEOUT):  # 等待设备恢复在线
                 return Callback.RET_ABORT
             return Callback.RET_RETRY
 
@@ -277,23 +275,27 @@ class BaseClient(object):
             print("send_keys callback called")
 
     def _callback_tmq_print_error(self, method, url, data, err):
-        logger.warning("HTTP Error happens, this message is printed for better debugging")
+        logger.warning(
+            "HTTP Error happens, this message is printed for better debugging")
         body = json.dumps(data) if data else ''
         logger.warning("Shell$ curl -X {method} -d '{body}' '{url}'".format(
             method=method.upper(), body=body or '', url=url))
         logger.warning("Error: %s", err)
 
     def _init_fix(self):
-        self.register_callback(Callback.ERROR, self._callback_fix_invalid_session_id)
+        self.register_callback(Callback.ERROR,
+                               self._callback_fix_invalid_session_id)
         self.register_callback(Callback.ERROR, self._callback_wait_ready)
-        if _is_tmq:
+        if _is_tmq_platform():
             # 输入之前处理弹窗
             # 出现错误是print出来，方便调试
             logger.info("register callbacks for tmq")
-            self.register_callback(Callback.HTTP_REQUEST_BEFORE, self._callback_tmq_before_send_keys)
-            self.register_callback(Callback.ERROR, self._callback_tmq_print_error)
+            self.register_callback(Callback.HTTP_REQUEST_BEFORE,
+                                   self._callback_tmq_before_send_keys)
+            self.register_callback(Callback.ERROR,
+                                   self._callback_tmq_print_error)
 
-    def wait_ready(self, timeout=120, noprint = False) -> bool:
+    def wait_ready(self, timeout=120, noprint=False) -> bool:
         """
         wait until WDA back to normal
 
@@ -301,11 +303,12 @@ class BaseClient(object):
             bool (if wda works)
         """
         deadline = time.time() + timeout
+
         def _dprint(message: str):
             if noprint:
                 return
             print(message)
-        
+
         _dprint("Wait ready (timeout={:.1f})".format(timeout))
         while time.time() < deadline:
             try:
@@ -313,7 +316,8 @@ class BaseClient(object):
                 _dprint("device back online")
                 return True
             except:
-                _dprint("wait_ready left {:.1f} seconds".format(deadline - time.time()))
+                _dprint("wait_ready left {:.1f} seconds".format(deadline -
+                                                                time.time()))
                 time.sleep(1.0)
         _dprint("device still offline")
         return False
@@ -362,7 +366,7 @@ class BaseClient(object):
                data: Optional[dict] = None,
                with_session: bool = False) -> attrdict.AttrDict:
         """ do http request """
-        urlpath = "/" + urlpath.lstrip("/") # urlpath always startswith /
+        urlpath = "/" + urlpath.lstrip("/")  # urlpath always startswith /
 
         callbacks = None
         if self.__callback_depth == 0:
@@ -381,7 +385,8 @@ class BaseClient(object):
 
         try:
             if with_session:
-                url = urljoin(self.__wda_url, "session", self.session_id, urlpath)
+                url = urljoin(self.__wda_url, "session", self.session_id,
+                              urlpath)
             run_callback(Callback.HTTP_REQUEST_BEFORE)
             response = httpdo(url, method, data)
             run_callback(Callback.HTTP_REQUEST_AFTER, response=response)
@@ -798,7 +803,7 @@ class BaseClient(object):
                                        dict(duration=duration))
 
     def tap(self, x, y):
-        #if _is_tmq:
+        #if _is_tmq_platform():
         #    return self.http.post("/mds/touchAndHold", dict(x=x, y=y, duration=0.02))
         return self._session_http.post('/wda/tap/0', dict(x=x, y=y))
 
@@ -939,9 +944,10 @@ class BaseClient(object):
         """
         if value is None:
             return self._session_http.get("/appium/settings").value
-        return self._session_http.post("/appium/settings", data={
-            "settings": value
-        }).value
+        return self._session_http.post("/appium/settings",
+                                       data={
+                                           "settings": value
+                                       }).value
 
     def xpath(self, value):
         """
