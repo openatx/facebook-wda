@@ -126,7 +126,7 @@ def _is_tmq_platform() -> bool:
 
 def _is_session_id_error(value: Union[str, dict]):
     if isinstance(value, dict):  # 新版WDA逻辑
-        error = value['error']
+        error = value.get('error')
         if error == "invalid session id" or "possibly crashed" in value.get(
                 'message', ''):
             return True
