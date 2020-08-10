@@ -35,11 +35,14 @@ try:
 except ImportError:
     from cached_property import cached_property
 
-logger = logging.getLogger("facebook-wda")  # default level: WARNING
+try:
+    from logzero import logger
+except ImportError:
+    logger = logging.getLogger("facebook-wda")  # default level: WARNING
 
 DEBUG = False
 HTTP_TIMEOUT = 60.0  # unit second
-DEVICE_WAIT_TIMEOUT = 30.0  # wait ready
+DEVICE_WAIT_TIMEOUT = 120.0  # wait ready
 
 LANDSCAPE = 'LANDSCAPE'
 PORTRAIT = 'PORTRAIT'
@@ -261,9 +264,10 @@ class BaseClient(object):
             self.session_id = None
             return Callback.RET_RETRY
 
-    def _callback_wait_ready(self, err):
         """ 等待设备恢复上线 """
-        if isinstance(err, (ConnectionError, requests.ConnectionError)):
+    def _callback_wait_ready(self, err):
+        logger.warning("Error: %s", err)
+        if isinstance(err, (ConnectionError, requests.ConnectionError, requests.ReadTimeout)):
             if not self.wait_ready(DEVICE_WAIT_TIMEOUT):  # 等待设备恢复在线
                 return Callback.RET_ABORT
             return Callback.RET_RETRY
@@ -285,11 +289,11 @@ class BaseClient(object):
     def _init_fix(self):
         self.register_callback(Callback.ERROR,
                                self._callback_fix_invalid_session_id)
-        self.register_callback(Callback.ERROR, self._callback_wait_ready)
         if _is_tmq_platform():
             # 输入之前处理弹窗
             # 出现错误是print出来，方便调试
             logger.info("register callbacks for tmq")
+            self.register_callback(Callback.ERROR, self._callback_wait_ready)
             self.register_callback(Callback.HTTP_REQUEST_BEFORE,
                                    self._callback_tmq_before_send_keys)
             self.register_callback(Callback.ERROR,
@@ -392,7 +396,7 @@ class BaseClient(object):
             run_callback(Callback.HTTP_REQUEST_AFTER, response=response)
             return response
         except (WDARequestError, ConnectionError,
-                requests.ConnectionError) as err:
+                requests.ConnectionError, requests.ReadTimeout) as err:
             ret = run_callback(Callback.ERROR, err=err)
             if ret == Callback.RET_RETRY:
                 return self._fetch(method, urlpath, data, with_session)
@@ -1293,9 +1297,10 @@ class Selector(object):
     def __getattr__(self, oper):
         if oper.startswith("_"):
             raise AttributeError("invalid attr", oper)
+        if not hasattr(Element, oper):
+            raise AttributeError("'Element' object has no attribute %r" % oper)
+
         el = self.get()
-        if not hasattr(el, oper):
-            raise AttributeError("invalid attr", oper)
         return getattr(el, oper)
 
     def set_timeout(self, s):
@@ -1407,6 +1412,22 @@ class Element(object):
         return ret
 
     @property
+    def info(self):
+        return {
+            "id": self.id,
+            "label": self.label,
+            "value": self.value,
+            "text": self.text,
+            "name": self.name,
+            "className": self.className,
+            "enabled": self.enabled,
+            "displayed": self.displayed,
+            "visible": self.visible,
+            "accessible": self.accessible,
+            "accessibilityContainer": self.accessibility_container
+        }
+
+    @property
     def id(self):
         return self._id
 
@@ -1445,10 +1466,6 @@ class Element(object):
     @property
     def value(self):
         return self._prop('attribute/value')
-
-    @property
-    def enabled(self):
-        return self._prop('enabled')
 
     @property
     def visible(self):
