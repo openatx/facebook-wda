@@ -10,6 +10,10 @@ class WDAError(Exception):
     """ base wda error """
 
 
+class WDABadGateway(WDAError):
+    """ bad gateway """
+
+    
 class WDARequestError(WDAError):
     def __init__(self, status, value):
         self.status = status

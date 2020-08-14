@@ -160,6 +160,9 @@ def _unsafe_httpdo(url, method='GET', data=None):
             requests.exceptions.ReadTimeout) as e:
         raise
 
+    if response.status_code == 502: # Bad Gateway
+        raise WDABadGateway(response.status_code, response.text)
+
     if DEBUG:
         ms = (time.time() - start) * 1000
         print('Return ({:.0f}ms): {}'.format(ms, response.text))
@@ -267,7 +270,7 @@ class BaseClient(object):
         """ 等待设备恢复上线 """
     def _callback_wait_ready(self, err):
         logger.warning("Error: %s", err)
-        if isinstance(err, (ConnectionError, requests.ConnectionError, requests.ReadTimeout)):
+        if isinstance(err, (ConnectionError, requests.ConnectionError, requests.ReadTimeout, WDABadGateway)):
             if not self.wait_ready(DEVICE_WAIT_TIMEOUT):  # 等待设备恢复在线
                 return Callback.RET_ABORT
             return Callback.RET_RETRY
@@ -395,8 +398,7 @@ class BaseClient(object):
             response = httpdo(url, method, data)
             run_callback(Callback.HTTP_REQUEST_AFTER, response=response)
             return response
-        except (WDARequestError, ConnectionError,
-                requests.ConnectionError, requests.ReadTimeout) as err:
+        except Exception as err:
             ret = run_callback(Callback.ERROR, err=err)
             if ret == Callback.RET_RETRY:
                 return self._fetch(method, urlpath, data, with_session)
