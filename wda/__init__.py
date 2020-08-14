@@ -1288,7 +1288,7 @@ class Selector(object):
                 return elems[0]
             if start_time + timeout < time.time():
                 break
-            time.sleep(0.1)
+            time.sleep(0.5)
 
         if raise_error:
             raise WDAElementNotFoundError("element not found",
@@ -1322,6 +1322,16 @@ class Selector(object):
     @property
     def exists(self):
         return len(self.find_element_ids()) > self._index
+
+    def click(self, timeout: Optional[float] = None):
+        """
+        Click element
+
+        Args:
+            timeout (float): max wait seconds
+        """
+        e = self.get(timeout=timeout)
+        e.click()
 
     def click_exists(self, timeout=0):
         """
@@ -1482,7 +1492,7 @@ class Element(object):
     def tap(self):
         return self._req('post', '/click')
 
-    def click(self, scroll: str = None):
+    def click(self):
         """
         Get element center position and do click, a little slower
         """
