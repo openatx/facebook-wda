@@ -809,8 +809,8 @@ class BaseClient(object):
                                        dict(duration=duration))
 
     def tap(self, x, y):
-        #if _is_tmq_platform():
-        #    return self.http.post("/mds/touchAndHold", dict(x=x, y=y, duration=0.02))
+        if _is_tmq_platform(): # and is MDS platform
+            return self._session_http.post("/mds/touchAndHold", dict(x=x, y=y, duration=0.02))
         return self._session_http.post('/wda/tap/0', dict(x=x, y=y))
 
     def _percent2pos(self, x, y, window_size=None):
