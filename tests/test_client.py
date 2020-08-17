@@ -43,7 +43,7 @@ def test_client_status(client: wda.Client):
 def test_client_session_without_argument(client: wda.Client):
     s = client.session('com.apple.Health')
     session_id = client.status()['sessionId']
-    assert s.id == session_id
+    assert s.session_id == session_id
     assert s.bundle_id == 'com.apple.Health'
     s.close()
 

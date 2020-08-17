@@ -5,6 +5,7 @@ from __future__ import print_function, unicode_literals
 
 import base64
 import copy
+import contextlib
 import enum
 import functools
 import io
@@ -36,7 +37,13 @@ except ImportError:
     from cached_property import cached_property
 
 try:
-    from logzero import logger
+    import sys
+    import logzero
+    if not sys.stdout.isatty():
+        log_format = '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s'
+        logzero.setup_default_logger(formatter=logzero.LogFormatter(
+            fmt=log_format))
+    logger = logzero.logger
 except ImportError:
     logger = logging.getLogger("facebook-wda")  # default level: WARNING
 
@@ -160,7 +167,7 @@ def _unsafe_httpdo(url, method='GET', data=None):
             requests.exceptions.ReadTimeout) as e:
         raise
 
-    if response.status_code == 502: # Bad Gateway
+    if response.status_code == 502:  # Bad Gateway
         raise WDABadGateway(response.status_code, response.text)
 
     if DEBUG:
@@ -266,11 +273,12 @@ class BaseClient(object):
             self.close()
             self.session_id = None
             return Callback.RET_RETRY
-
         """ 等待设备恢复上线 """
+
     def _callback_wait_ready(self, err):
         logger.warning("Error: %s", err)
-        if isinstance(err, (ConnectionError, requests.ConnectionError, requests.ReadTimeout, WDABadGateway)):
+        if isinstance(err, (ConnectionError, requests.ConnectionError,
+                            requests.ReadTimeout, WDABadGateway)):
             if not self.wait_ready(DEVICE_WAIT_TIMEOUT):  # 等待设备恢复在线
                 return Callback.RET_ABORT
             return Callback.RET_RETRY
@@ -282,6 +290,9 @@ class BaseClient(object):
             print("send_keys callback called")
 
     def _callback_tmq_print_error(self, method, url, data, err):
+        if 'no such alert' in str(err):  # too many this error
+            return
+
         logger.warning(
             "HTTP Error happens, this message is printed for better debugging")
         body = json.dumps(data) if data else ''
@@ -809,8 +820,9 @@ class BaseClient(object):
                                        dict(duration=duration))
 
     def tap(self, x, y):
-        if _is_tmq_platform(): # and is MDS platform
-            return self._session_http.post("/mds/touchAndHold", dict(x=x, y=y, duration=0.02))
+        if _is_tmq_platform():  # and is MDS platform
+            return self._session_http.post("/mds/touchAndHold",
+                                           dict(x=x, y=y, duration=0.02))
         return self._session_http.post('/wda/tap/0', dict(x=x, y=y))
 
     def _percent2pos(self, x, y, window_size=None):
@@ -1037,6 +1049,38 @@ class Alert(object):
             if bname in avaliable_names:
                 return self.http.post('/alert/accept', data={"name": bname})
         raise ValueError("Only these buttons can be clicked", avaliable_names)
+
+    @contextlib.contextmanager
+    def watch_and_click(
+            self,
+            buttons: Optional[list] = ["使用App时允许", "好", "稍后", "稍后提醒", "确定", "允许", "以后"],
+            interval: float =2.0):
+        """ watch and click button
+        Args:
+            buttons: buttons name which need to click
+            interval: check interval
+        """
+        event = threading.Event()
+
+        def _inner():
+            while not event.is_set():
+                try:
+                    alert_buttons = self.buttons()
+                    logger.info("Alert detected, buttons: %s", alert_buttons)
+                    for btn_name in buttons:
+                        if btn_name in alert_buttons:
+                            logger.info("Alert click: %s", btn_name)
+                            self.click(btn_name)
+                            break
+                    else:
+                        logger.warning("Alert not handled")
+                except WDARequestError:
+                    pass
+                time.sleep(interval)
+
+        threading.Thread(name="alert", target=_inner, daemon=True).start()
+        yield None
+        event.set()
 
 
 class Client(BaseClient):
