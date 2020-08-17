@@ -484,6 +484,14 @@ s.alert.click("设置")
 s.alert.click(["设置", "信任", "安装"]) # when Arg type is list, click the first match, raise ValueError if no match
 ```
 
+Alert monitor
+
+```python
+with c.alert.watch_and_click(['好', '确定']):
+	s(label="Settings").click() # 
+	# ... other operations
+```
+
 ### Callback
 回调操作: `register_callback`
 
