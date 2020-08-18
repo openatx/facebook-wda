@@ -39,7 +39,7 @@ except ImportError:
 try:
     import sys
     import logzero
-    if not sys.stdout.isatty():
+    if not (hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()):
         log_format = '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s'
         logzero.setup_default_logger(formatter=logzero.LogFormatter(
             fmt=log_format))
@@ -820,7 +820,7 @@ class BaseClient(object):
                                        dict(duration=duration))
 
     def tap(self, x, y):
-        if _is_tmq_platform():  # and is MDS platform
+        if _is_tmq_platform() and os.environ.get("TMQ_ORIGIN") == "civita":  # in TMQ and belong to MDS
             return self._session_http.post("/mds/touchAndHold",
                                            dict(x=x, y=y, duration=0.02))
         return self._session_http.post('/wda/tap/0', dict(x=x, y=y))
