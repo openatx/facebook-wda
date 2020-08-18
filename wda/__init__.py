@@ -39,7 +39,7 @@ except ImportError:
 try:
     import sys
     import logzero
-    if not sys.stdout.isatty():
+    if not (hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()):
         log_format = '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s'
         logzero.setup_default_logger(formatter=logzero.LogFormatter(
             fmt=log_format))
