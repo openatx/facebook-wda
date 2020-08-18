@@ -820,7 +820,7 @@ class BaseClient(object):
                                        dict(duration=duration))
 
     def tap(self, x, y):
-        if _is_tmq_platform() and not os.environ.get("TMQ_HTTP_RROXY"):  # in TMQ and belong to MDS
+        if _is_tmq_platform() and not os.environ.get("TMQ_HTTP_PROXY"):  # in TMQ and belong to MDS
             return self._session_http.post("/mds/touchAndHold",
                                            dict(x=x, y=y, duration=0.02))
         return self._session_http.post('/wda/tap/0', dict(x=x, y=y))
