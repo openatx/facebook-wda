@@ -48,8 +48,8 @@ except ImportError:
     logger = logging.getLogger("facebook-wda")  # default level: WARNING
 
 DEBUG = False
-HTTP_TIMEOUT = 60.0  # unit second
-DEVICE_WAIT_TIMEOUT = 120.0  # wait ready
+HTTP_TIMEOUT = 180.0  # unit second
+DEVICE_WAIT_TIMEOUT = 180.0  # wait ready
 
 LANDSCAPE = 'LANDSCAPE'
 PORTRAIT = 'PORTRAIT'

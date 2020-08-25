@@ -490,6 +490,11 @@ Alert monitor
 with c.alert.watch_and_click(['好', '确定']):
 	s(label="Settings").click() # 
 	# ... other operations
+
+# default watch buttons are
+# ["使用App时允许", "好", "稍后", "稍后提醒", "确定", "允许", "以后"]
+with c.alert.watch_and_click(interval=2.0): # default check every 2.0s
+	# ... operations
 ```
 
 ### Callback
