@@ -1053,7 +1053,7 @@ class Alert(object):
     @contextlib.contextmanager
     def watch_and_click(
             self,
-            buttons: Optional[list] = ["使用App时允许", "好", "稍后", "稍后提醒", "确定", "允许", "以后"],
+            buttons: Optional[list] = ["使用App时允许", "好", "稍后", "稍后提醒", "确定", "允许", "以后", "打开"],
             interval: float =2.0):
         """ watch and click button
         Args:
