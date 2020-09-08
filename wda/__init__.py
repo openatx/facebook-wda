@@ -29,7 +29,7 @@ from six.moves import urllib
 from . import requests_usbmux, xcui_element_types
 from ._proto import *
 from .exceptions import *
-from .utils import inject_call
+from .utils import inject_call, limit_call_depth
 
 try:
     from functools import cached_property  # Python3.8+
@@ -163,8 +163,7 @@ def _unsafe_httpdo(url, method='GET', data=None):
                                            url,
                                            json=data,
                                            timeout=HTTP_TIMEOUT)
-    except (requests.exceptions.ConnectionError,
-            requests.exceptions.ReadTimeout) as e:
+    except (requests.ConnectionError, requests.ReadTimeout) as e:
         raise
 
     if response.status_code == 502:  # Bad Gateway
@@ -261,16 +260,17 @@ class BaseClient(object):
         self.__session_id = _session_id
         self.__is_app = bool(_session_id)  # set to freeze session_id
         self.__timeout = 30.0
-        self.__target = None
         self.__callbacks = defaultdict(list)
         self.__callback_depth = 0
-        self._init_fix()
+        self.__callback_running = False
+
+        if not _session_id:
+            self._init_callback()
 
     def _callback_fix_invalid_session_id(self, err: WDAError):
         """ 当遇到 invalid session id错误时，更新session id并重试 """
         if isinstance(err, WDARequestError) and \
                 err.status == Status.INVALID_SESSION_ID: # and not self.__is_app:
-            self.close()
             self.session_id = None
             return Callback.RET_RETRY
         """ 等待设备恢复上线 """
@@ -300,7 +300,7 @@ class BaseClient(object):
             method=method.upper(), body=body or '', url=url))
         logger.warning("Error: %s", err)
 
-    def _init_fix(self):
+    def _init_callback(self):
         self.register_callback(Callback.ERROR,
                                self._callback_fix_invalid_session_id)
         if _is_tmq_platform():
@@ -325,7 +325,7 @@ class BaseClient(object):
         def _dprint(message: str):
             if noprint:
                 return
-            print(message)
+            print(time.ctime(), message)
 
         _dprint("Wait ready (timeout={:.1f})".format(timeout))
         while time.time() < deadline:
@@ -366,18 +366,24 @@ class BaseClient(object):
         """ 运行回调函数 """
         if not callbacks:
             return
-        for fn in callbacks[event_name]:
-            ret = inject_call(fn, **kwargs)
-            if ret in [
-                    Callback.RET_RETRY, Callback.RET_ABORT,
-                    Callback.RET_CONTINUE
-            ]:
-                return ret
 
+        self.__callback_running = True
+        try:
+            for fn in callbacks[event_name]:
+                ret = inject_call(fn, **kwargs)
+                if ret in [
+                        Callback.RET_RETRY, Callback.RET_ABORT,
+                        Callback.RET_CONTINUE
+                ]:
+                    return ret
+        finally:
+            self.__callback_running = False
+        
     @property
     def callbacks(self):
         return self.__callbacks
 
+    @limit_call_depth(3)
     def _fetch(self,
                method: str,
                urlpath: str,
@@ -386,12 +392,13 @@ class BaseClient(object):
         """ do http request """
         urlpath = "/" + urlpath.lstrip("/")  # urlpath always startswith /
 
-        callbacks = None
-        if self.__callback_depth == 0:
-            callbacks = self.__callbacks
+        callbacks = self.__callbacks
 
-        self.__callback_depth += 1
+        if self.__callback_running:
+            callbacks = None
+
         url = urljoin(self.__wda_url, urlpath)
+
         run_callback = functools.partial(self._run_callback,
                                          callbacks=callbacks,
                                          method=method,
@@ -417,8 +424,6 @@ class BaseClient(object):
                 return
             else:
                 raise
-        finally:
-            self.__callback_depth -= 1
 
     @property
     def http(self):
@@ -458,6 +463,10 @@ class BaseClient(object):
     def unlock(self):
         """ unlock screen, double press home """
         return self.http.post('/wda/unlock')
+
+    def sleep(self, secs: float):
+        """ same as time.sleep """
+        time.sleep(secs)
 
     def app_current(self) -> dict:
         """
@@ -596,7 +605,10 @@ class BaseClient(object):
             res = self.session().app_state(bundle_id)
             if res.value != 4:
                 raise
-        return Client(self.__wda_url, _session_id=res.sessionId)
+        client = Client(self.__wda_url, _session_id=res.sessionId)
+        client.__timeout = self.__timeout
+        client.__callbacks = self.__callbacks
+        return client
 
     def close(self):  # close session
         try:
