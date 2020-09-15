@@ -378,7 +378,7 @@ class BaseClient(object):
                     return ret
         finally:
             self.__callback_running = False
-        
+
     @property
     def callbacks(self):
         return self.__callbacks
@@ -832,7 +832,8 @@ class BaseClient(object):
                                        dict(duration=duration))
 
     def tap(self, x, y):
-        if _is_tmq_platform() and os.environ.get("TMQ_ORIGIN") == "civita":  # in TMQ and belong to MDS
+        if _is_tmq_platform() and os.environ.get(
+                "TMQ_ORIGIN") == "civita":  # in TMQ and belong to MDS
             return self._session_http.post("/mds/touchAndHold",
                                            dict(x=x, y=y, duration=0.02))
         return self._session_http.post('/wda/tap/0', dict(x=x, y=y))
@@ -1078,10 +1079,12 @@ class Alert(object):
         raise ValueError("Only these buttons can be clicked", avaliable_names)
 
     @contextlib.contextmanager
-    def watch_and_click(
-            self,
-            buttons: Optional[list] = ["使用App时允许", "好", "稍后", "稍后提醒", "确定", "允许", "以后", "打开", "录屏"],
-            interval: float =2.0):
+    def watch_and_click(self,
+                        buttons: Optional[list] = [
+                            "使用App时允许", "无线局域网与蜂窝网络", "好", "稍后", "稍后提醒", "确定",
+                            "允许", "以后", "打开", "录屏"
+                        ],
+                        interval: float = 2.0):
         """ watch and click button
         Args:
             buttons: buttons name which need to click
