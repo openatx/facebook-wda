@@ -1,23 +1,14 @@
 # Created: codeskyblue 2020/05
 # Inspired by: https://github.com/iOSForensics/pymobiledevice
 
-import contextlib
-import io
 import logging
 import os
-import platform
 import plistlib
-import pprint
 import socket
-import ssl
 import struct
 import sys
-import tempfile
-import uuid
 from functools import lru_cache
 from typing import Optional, Union
-
-from cached_property import cached_property
 
 from .exceptions import MuxConnectError, MuxError
 
@@ -165,17 +156,23 @@ class Usbmux:
         _devices = [item['Properties'] for item in data['DeviceList']]
         return [d for d in _devices if d['ConnectionType'] == 'USB']
 
-    @lru_cache(1024)
-    def device(self, udid: Optional[str] = None) -> "Device":
-        """ return device object """
-        if not udid:
-            devices = self.device_list()
-            if len(devices) == 0:
-                raise MuxError("No device connected")
-            if len(devices) > 1:
-                raise MuxError("More then two device connected")
-            udid = devices[0]['SerialNumber']
+    def get_single_device_udid(self) -> str:
+        """ to run this function, there must be only one device connected
+        
+        Raises:
+            MuxError
+        """
+        devices = self.device_list()
+        if len(devices) == 0:
+            raise MuxError("No device connected")
+        if len(devices) > 1:
+            raise MuxError("More then two device connected")
+        udid = devices[0]['SerialNumber']
+        return udid
 
+    @lru_cache(1024)
+    def device(self, udid: str) -> "Device":
+        """ return device object """
         return Device(udid, self)
 
     def _check(self, data: dict):

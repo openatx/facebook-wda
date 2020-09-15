@@ -89,6 +89,7 @@ def test_session_keyboard_dismiss():
 
 
 def test_session_orientation(c: wda.Client):
+    c.orientation = wda.PORTRAIT
     with c.session('com.apple.mobilesafari') as s:
         assert s.orientation == wda.PORTRAIT
         s.orientation = wda.LANDSCAPE

@@ -47,7 +47,9 @@ class UsbmuxHTTPConnection(httplib.HTTPConnection, object):
         udid, port = splitport(netloc)
         if not port:
             port = 8100 # WDA Default port
-        
+        if not udid:
+            udid = _usbmux.get_single_device_udid()
+
         _device = _usbmux.device(udid)
         conn = _device.create_inner_connection(int(port))
         self.sock = conn._sock

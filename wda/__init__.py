@@ -919,7 +919,11 @@ class BaseClient(object):
         Return string
         One of <PORTRAIT | LANDSCAPE>
         """
-        return self._session_http.get('orientation').value
+        for _ in range(3):
+            result = self._session_http.get('orientation').value
+            if result:
+                return result
+            time.sleep(.5)
 
     @orientation.setter
     def orientation(self, value):
@@ -936,6 +940,17 @@ class BaseClient(object):
         Returns:
             namedtuple: eg
                 Size(width=320, height=568)
+        """
+        w, h = self._unsafe_window_size()
+        if w == 0 and h == 0:
+            # FIXME(ssx): launch another app is not a good idea, but I did'nt found some other way
+            self.unlock()
+            self.session("com.apple.Preferences")
+        return self._unsafe_window_size()
+
+    def _unsafe_window_size(self):
+        """
+        returns (width, height) might be (0, 0)
         """
         value = self._session_http.get('/window/size').value
         w = roundint(value['width'])
@@ -1065,7 +1080,7 @@ class Alert(object):
     @contextlib.contextmanager
     def watch_and_click(
             self,
-            buttons: Optional[list] = ["使用App时允许", "好", "稍后", "稍后提醒", "确定", "允许", "以后", "打开"],
+            buttons: Optional[list] = ["使用App时允许", "好", "稍后", "稍后提醒", "确定", "允许", "以后", "打开", "录屏"],
             interval: float =2.0):
         """ watch and click button
         Args:
