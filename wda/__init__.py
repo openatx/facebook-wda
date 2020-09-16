@@ -894,6 +894,13 @@ class BaseClient(object):
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
         return self._session_http.post('/wda/dragfromtoforduration', data=data)
 
+    def _fast_swipe(self, x1, y1, x2, y2, velocity: int = 500):
+        """
+        velocity: the larger the faster
+        """
+        data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, velocity=velocity)
+        return self._session_http.post('/wda/drag', data=data)
+
     def swipe_left(self):
         """ swipe right to left """
         w, h = self.window_size()
@@ -913,6 +920,16 @@ class BaseClient(object):
         """ swipe from center to bottom """
         w, h = self.window_size()
         return self.swipe(w // 2, h // 2, w // 2, h - 1)
+
+    def _fast_swipe_ext(self, direction: str):
+        if direction == "up":
+            w, h = self.window_size()
+            return self.swipe(w // 2, h // 2, w // 2, 1)
+        elif direction == "down":
+            w, h = self.window_size()
+            return self._fast_swipe(w // 2, h // 2, w // 2, h - 1)
+        else:
+            raise RuntimeError("not supported direction:", direction)
 
     @property
     def orientation(self):
