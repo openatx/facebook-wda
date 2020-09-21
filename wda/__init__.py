@@ -313,6 +313,24 @@ class BaseClient(object):
             self.register_callback(Callback.ERROR,
                                    self._callback_tmq_print_error)
 
+    def _callback_json_report(self, method, urlpath):
+        """ TODO: ssx """
+        pass
+
+    def _set_output_report(self, filename: str):
+        """
+        Args:
+            filename: json log
+        """
+        self.register_callback(Callback.HTTP_REQUEST_BEFORE, self._callback_json_report)
+
+    def is_ready(self) -> bool:
+        try:
+            self.status()
+            return True
+        except:
+            return False
+
     def wait_ready(self, timeout=120, noprint=False) -> bool:
         """
         wait until WDA back to normal
@@ -329,11 +347,10 @@ class BaseClient(object):
 
         _dprint("Wait ready (timeout={:.1f})".format(timeout))
         while time.time() < deadline:
-            try:
-                self.status()
+            if self.is_ready():
                 _dprint("device back online")
                 return True
-            except:
+            else:
                 _dprint("wait_ready left {:.1f} seconds".format(deadline -
                                                                 time.time()))
                 time.sleep(1.0)
@@ -1044,6 +1061,8 @@ class BaseClient(object):
 
 
 class Alert(object):
+    DEFAULT_ACCEPT_BUTTONS = []
+
     def __init__(self, client: BaseClient):
         self._c = client
         self.http = client._session_http
@@ -1669,3 +1688,20 @@ class USBClient(Client):
     """ connect device through unix:/var/run/usbmuxd """
     def __init__(self, udid: str = "", port: int = 8100):
         super().__init__(url="usbmux://{}:{}".format(udid, port))
+
+        if not self.is_ready():
+            self._start_xctest()
+
+    def _start_xctest(self) -> bool:
+        import shutil
+        import subprocess
+        tins_path = shutil.which("tins")
+        if not tins_path:
+            return False
+
+        logger.info("WDA is not running, exec: tins xctest")
+        p = subprocess.Popen([tins_path, 'xctest'])
+        time.sleep(3)
+        assert p.poll() is None
+        return self.wait_ready()
+
