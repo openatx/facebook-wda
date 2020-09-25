@@ -188,9 +188,15 @@ def _unsafe_httpdo(url, method='GET', data=None):
                 status = Status.INVALID_SESSION_ID
             else:
                 status = Status.ERROR
+            
             value = r.value.copy()
             value.pop("traceback", None)
-            raise WDARequestError(status, value)
+            error = r.value.get("error")
+
+            if error == "unknown error":
+                raise WDARequestError(status, value)
+            else:
+                raise WDARequestError(status, value)
         return r
     except JSONDecodeError:
         if response.text == "":
@@ -485,6 +491,7 @@ class BaseClient(object):
         """ same as time.sleep """
         time.sleep(secs)
 
+    @retry.retry(WDAUnknownError, tries=3, delay=.5, jitter=.2)
     def app_current(self) -> dict:
         """
         Returns:

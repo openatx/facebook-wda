@@ -34,3 +34,8 @@ class WDAElementNotFoundError(WDAError):
 
 class WDAElementNotDisappearError(WDAError):
     """ element not disappera """
+
+
+class WDAUnknownError(WDARequestError):
+    """ error: unknown error, message: *** - """
+    
