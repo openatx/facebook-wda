@@ -166,7 +166,7 @@ def _unsafe_httpdo(url, method='GET', data=None):
             value = r.value.copy()
             value.pop("traceback", None)
 
-            for errCls in (WDAInvalidSessionIdError, WDAPossiblyCrashedError, WDAKeyboardNotPresentError):
+            for errCls in (WDAInvalidSessionIdError, WDAPossiblyCrashedError, WDAKeyboardNotPresentError, WDAUnknownError):
                 if errCls.check(value):
                     raise errCls(status, value)
 
@@ -467,6 +467,7 @@ class BaseClient(object):
         """ same as time.sleep """
         time.sleep(secs)
 
+    @retry.retry(WDAUnknownError, tries=3, delay=.5, jitter=.2)
     def app_current(self) -> dict:
         """
         Returns:

@@ -98,6 +98,15 @@ def test_session_orientation(c: wda.Client):
         # recover orientation
         s.orientation = wda.PORTRAIT
 
+
+def test_session_invalid_with_autofix(c: wda.Client):
+    c.session("com.apple.Preferences")
+    c.session_id = "123"
+    assert c.app_current().bundleId == "com.apple.Preferences"
+    assert isinstance(c.info, dict)
+    assert c.session_id != "123"
+
+
 @mark.skip("TODO")
 def test_session_wait_gone():
     s = c.session()

@@ -78,3 +78,10 @@ class WDAPossiblyCrashedError(WDARequestError):
         if "possibly crashed" in v.get('message', ''):
             return True
         return False
+
+
+class WDAUnknownError(WDARequestError):
+    """ error: unknown error, message: *** - """
+    @staticmethod
+    def check(v: dict):
+        return v.get("error") == "unknown error"
