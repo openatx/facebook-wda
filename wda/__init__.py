@@ -56,13 +56,9 @@ PORTRAIT = 'PORTRAIT'
 LANDSCAPE_RIGHT = 'UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT'
 PORTRAIT_UPSIDEDOWN = 'UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN'
 
-JSONDecodeError = json.decoder.JSONDecodeError if hasattr(
-    json.decoder, "JSONDecodeError") else ValueError
-
 
 class Status(enum.IntEnum):
     # 不是怎么准确，status在mds平台上变来变去的
-    INVALID_SESSION_ID = 10  # error: "invalid session id", "message": "Session does not exist"
     UNKNOWN = 100  # other status
     ERROR = 110
 
@@ -133,19 +129,6 @@ def _requests_session_pool_get(scheme, netloc):
 def _is_tmq_platform() -> bool:
     return os.getenv("TMQ") == "true"
 
-
-def _is_session_id_error(value: Union[str, dict]):
-    if isinstance(value, dict):  # 新版WDA逻辑
-        error = value.get('error')
-        if error == "invalid session id" or "possibly crashed" in value.get(
-                'message', ''):
-            return True
-    elif isinstance(value, str):  # 旧版WDA中的value就是字符串
-        if "invalid session id" in value or "possibly crashed" in value:
-            return True
-    return False
-
-
 def _unsafe_httpdo(url, method='GET', data=None):
     """
     Do HTTP Request
@@ -178,18 +161,15 @@ def _unsafe_httpdo(url, method='GET', data=None):
         retjson['status'] = retjson.get('status', 0)
         r = convert(retjson)
 
-        if r.status != 0:  # in new WDA, status is always 0
-            if _is_session_id_error(r.value):
-                r['status'] = Status.INVALID_SESSION_ID
-            raise WDARequestError(r.status, r.value)
-
         if isinstance(r.value, dict) and r.value.get("error"):
-            if _is_session_id_error(r.value):
-                status = Status.INVALID_SESSION_ID
-            else:
-                status = Status.ERROR
+            status = Status.ERROR
             value = r.value.copy()
             value.pop("traceback", None)
+
+            for errCls in (WDAInvalidSessionIdError, WDAPossiblyCrashedError, WDAKeyboardNotPresentError):
+                if errCls.check(value):
+                    raise errCls(status, value)
+
             raise WDARequestError(status, value)
         return r
     except JSONDecodeError:
@@ -269,9 +249,11 @@ class BaseClient(object):
 
     def _callback_fix_invalid_session_id(self, err: WDAError):
         """ 当遇到 invalid session id错误时，更新session id并重试 """
-        if isinstance(err, WDARequestError) and \
-                err.status == Status.INVALID_SESSION_ID: # and not self.__is_app:
+        if isinstance(err, WDAInvalidSessionIdError): # and not self.__is_app:
             self.session_id = None
+            return Callback.RET_RETRY
+        if isinstance(err, WDAPossiblyCrashedError):
+            self.session_id = self.session().session_id # generate new sessionId
             return Callback.RET_RETRY
         """ 等待设备恢复上线 """
 
@@ -631,7 +613,7 @@ class BaseClient(object):
         try:
             return self._session_http.delete('/')
         except WDARequestError as e:
-            if e.status != Status.INVALID_SESSION_ID:
+            if not isinstance(e, (WDAInvalidSessionIdError, WDAPossiblyCrashedError)):
                 raise
 
     #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
@@ -992,6 +974,7 @@ class BaseClient(object):
         h = roundint(value['height'])
         return namedtuple('Size', ['width', 'height'])(w, h)
 
+    @retry.retry(WDAKeyboardNotPresentError, tries=3, delay=1.0)
     def send_keys(self, value):
         """
         send keys, yet I know not, todo function
@@ -1536,7 +1519,7 @@ class Element(object):
     @property
     def info(self):
         return {
-            "id": self.id,
+            "id": self.session_id,
             "label": self.label,
             "value": self.value,
             "text": self.text,
