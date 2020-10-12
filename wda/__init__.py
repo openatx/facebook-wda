@@ -959,11 +959,12 @@ class BaseClient(object):
             namedtuple: eg
                 Size(width=320, height=568)
         """
-        w, h = self._unsafe_window_size()
-        if w == 0 and h == 0:
-            # FIXME(ssx): launch another app is not a good idea, but I did'nt found some other way
-            self.unlock()
-            self.session("com.apple.Preferences")
+        size = self._unsafe_window_size()
+        if min(size) > 0:
+            return size
+        # FIXME(ssx): launch another app is not a good idea, but I did'nt found some other way
+        self.unlock()
+        self.session("com.apple.Preferences")
         return self._unsafe_window_size()
 
     def _unsafe_window_size(self):
