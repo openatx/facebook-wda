@@ -1521,7 +1521,7 @@ class Element(object):
     @property
     def info(self):
         return {
-            "id": self.session_id,
+            "id": self._id,
             "label": self.label,
             "value": self.value,
             "text": self.text,
