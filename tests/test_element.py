@@ -32,10 +32,11 @@ def test_element_tap_hold(c: wda.Client):
     assert s(classChain='**/Icon[`name == "Weather"`]/Button[`name == "DeleteButton"`]').get(2.0, raise_error=False)
 
 
-@mark.skip("Require English")
 def test_element_name_matches(c: wda.Client):
     s = c.session("com.apple.Preferences")
-    assert s(nameMatches='^S.ttings?').exists
+    assert s(nameMatches='^蓝牙').exists
+    info = s(nameMatches='^蓝牙').info
+    assert info['label'] == '蓝牙'
 
 
 @mark.skip("Require English")

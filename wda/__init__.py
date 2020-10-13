@@ -1308,10 +1308,9 @@ class Selector(object):
         if self._name:
             qs.append("name == '%s'" % self._name)
         if self._name_part:
-            qs.append("name CONTAINS '%s'" % self._name_part)
+            qs.append("name CONTAINS %r" % self._name_part)
         if self._name_regex:
-            qs.append("name MATCHES '%s'" %
-                      self._name_regex.encode('unicode_escape'))
+            qs.append("name MATCHES %r" % self._name_regex)
         if self._label:
             qs.append("label == '%s'" % self._label)
         if self._label_part:
