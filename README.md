@@ -115,6 +115,11 @@ c = wda.USBClient("539c5fffb18f2be0bf7f771d68f7c327fb68d2d9", port=8100)
 # 也支持通过DEVICE_URL访问
 c = wda.Client("usbmux://{udid}:8100".format(udid="539c5fffb18f2be0bf7f771d68f7c327fb68d2d9"))
 print(c.window_size())
+
+# 注:
+# 仅在安装了tins的电脑上可以使用（目前并不对外开放)
+# 1.2.0 引入 wda_bundle_id 参数
+c = wda.USBClient("539c5fffb18f2be0bf7f771d68f7c327fb68d2d9", port=8100, wda_bundle_id="com.facebook.custom.xctest")
 ```
 
 看到这里，可以看 [examples](examples) 目录下的一些代码了 

@@ -962,9 +962,7 @@ class BaseClient(object):
         size = self._unsafe_window_size()
         if min(size) > 0:
             return size
-        # FIXME(ssx): launch another app is not a good idea, but I did'nt found some other way
-        self.unlock()
-        self.session("com.apple.Preferences")
+        _ = self.orientation # after this operation, will safe to get window_size
         return self._unsafe_window_size()
 
     def _unsafe_window_size(self):
@@ -1670,8 +1668,10 @@ class Element(object):
 
 class USBClient(Client):
     """ connect device through unix:/var/run/usbmuxd """
-    def __init__(self, udid: str = "", port: int = 8100):
+    def __init__(self, udid: str = "", port: int = 8100, wda_bundle_id=None):
         super().__init__(url="usbmux://{}:{}".format(udid, port))
+        self.__udid = udid
+        self.__wda_bundle_id = wda_bundle_id
 
         if not self.is_ready():
             self._start_xctest()
@@ -1684,7 +1684,14 @@ class USBClient(Client):
             return False
 
         logger.info("WDA is not running, exec: tins xctest")
-        p = subprocess.Popen([tins_path, 'xctest'])
+        args = []
+        if self.__udid:
+            args.extend(['-u', self.__udid])
+        args.append('xctest')
+        if self.__wda_bundle_id:
+            args.extend(['-B', self.__wda_bundle_id])
+
+        p = subprocess.Popen([tins_path] + args)
         time.sleep(3)
         assert p.poll() is None
         return self.wait_ready()
