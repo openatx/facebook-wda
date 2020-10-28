@@ -333,7 +333,7 @@ s(name='URL', index=1) # find the second element. index of founded elements, min
 s(className='Button', name='URL', visible=True, labelContains="Addr")
 ```
 
-More powerful findding method
+More powerful finding method
 
 ```python
 s(xpath='//Button[@name="URL"]')

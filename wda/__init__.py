@@ -1101,7 +1101,7 @@ class Alert(object):
     def watch_and_click(self,
                         buttons: Optional[list] = [
                             "使用App时允许", "无线局域网与蜂窝网络", "好", "稍后", "稍后提醒", "确定",
-                            "允许", "以后", "打开", "录屏"
+                            "允许", "以后", "打开", "录屏", "Allow", "OK", "YES", "Yes", "Later", "Close"
                         ],
                         interval: float = 2.0):
         """ watch and click button
