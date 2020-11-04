@@ -348,6 +348,8 @@ s(classChain='**/Button[`name == "URL"`]')
 
 To see more `Class Chain Queries` examples, view <https://github.com/facebookarchive/WebDriverAgent/wiki/Class-Chain-Queries-Construction-Rules>
 
+[Predicate Format String Syntax](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Predicates/Articles/pSyntax.html)
+
 ### Get Element info
 ```python
 e = s(text='Dashboard').get(timeout=10.0)

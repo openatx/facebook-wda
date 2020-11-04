@@ -109,7 +109,7 @@ def namedlock(name):
     return namedlock.locks[name]
 
 
-def httpdo(url, method="GET", data=None) -> attrdict.AttrDict:
+def httpdo(url, method="GET", data=None, timeout=None) -> attrdict.AttrDict:
     """
     thread safe http request
 
@@ -118,7 +118,7 @@ def httpdo(url, method="GET", data=None) -> attrdict.AttrDict:
     """
     p = urlparse(url)
     with namedlock(p.scheme + "://" + p.netloc):
-        return _unsafe_httpdo(url, method, data)
+        return _unsafe_httpdo(url, method, data, timeout)
 
 
 @functools.lru_cache(1024)
@@ -129,7 +129,7 @@ def _requests_session_pool_get(scheme, netloc):
 def _is_tmq_platform() -> bool:
     return os.getenv("TMQ") == "true"
 
-def _unsafe_httpdo(url, method='GET', data=None):
+def _unsafe_httpdo(url, method='GET', data=None, timeout=None):
     """
     Do HTTP Request
     """
@@ -139,13 +139,15 @@ def _unsafe_httpdo(url, method='GET', data=None):
         print("Shell$ curl -X {method} -d '{body}' '{url}'".format(
             method=method.upper(), body=body or '', url=url))
 
+    if timeout is None:
+        timeout = HTTP_TIMEOUT
     try:
         u = urlparse(url)
         request_session = _requests_session_pool_get(u.scheme, u.netloc)
         response = request_session.request(method,
                                            url,
                                            json=data,
-                                           timeout=HTTP_TIMEOUT)
+                                           timeout=timeout)
     except (requests.ConnectionError, requests.ReadTimeout) as e:
         raise
 
@@ -308,9 +310,9 @@ class BaseClient(object):
 
     def is_ready(self) -> bool:
         try:
-            self.status()
+            self.http.get("status", timeout=3)
             return True
-        except:
+        except Exception as e:
             return False
 
     def wait_ready(self, timeout=120, noprint=False) -> bool:
@@ -387,7 +389,8 @@ class BaseClient(object):
                method: str,
                urlpath: str,
                data: Optional[dict] = None,
-               with_session: bool = False) -> attrdict.AttrDict:
+               with_session: bool = False,
+               timeout: Optional[float] = None) -> attrdict.AttrDict:
         """ do http request """
         urlpath = "/" + urlpath.lstrip("/")  # urlpath always startswith /
 
@@ -412,7 +415,7 @@ class BaseClient(object):
                 url = urljoin(self.__wda_url, "session", self.session_id,
                               urlpath)
             run_callback(Callback.HTTP_REQUEST_BEFORE)
-            response = httpdo(url, method, data)
+            response = httpdo(url, method, data, timeout)
             run_callback(Callback.HTTP_REQUEST_AFTER, response=response)
             return response
         except Exception as err:
@@ -452,7 +455,7 @@ class BaseClient(object):
         """Hit healthcheck"""
         return self.http.get('/wda/healthcheck')
 
-    def locked(self):
+    def locked(self) -> bool:
         """ returns locked status, true or false """
         return self.http.get("/wda/locked").value
 
@@ -595,6 +598,10 @@ class BaseClient(object):
             "desiredCapabilities": capabilities.get('alwaysMatch',
                                                     {}),  # 兼容旧版的wda
         }
+
+        # when device is Locked, it is unable to start app
+        if self.locked():
+            self.unlock()
 
         try:
             res = self.http.post('session', payload)
