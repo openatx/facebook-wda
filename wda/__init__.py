@@ -80,7 +80,7 @@ def convert(dictionary):
     return attrdict.AttrDict(dictionary)
 
     # Old implement
-    #return namedtuple('GenericDict', list(dictionary.keys()))(**dictionary)
+    # return namedtuple('GenericDict', list(dictionary.keys()))(**dictionary)
 
 
 def urljoin(*urls):
@@ -128,6 +128,7 @@ def _requests_session_pool_get(scheme, netloc):
 
 def _is_tmq_platform() -> bool:
     return os.getenv("TMQ") == "true"
+
 
 def _unsafe_httpdo(url, method='GET', data=None, timeout=None):
     """
@@ -230,7 +231,7 @@ class BaseClient(object):
         """
         Args:
             target (string): the device url
-        
+
         If target is empty, device url will set to env-var "DEVICE_URL" if defined else set to "http://localhost:8100"
         """
         if not url:
@@ -251,11 +252,11 @@ class BaseClient(object):
 
     def _callback_fix_invalid_session_id(self, err: WDAError):
         """ 当遇到 invalid session id错误时，更新session id并重试 """
-        if isinstance(err, WDAInvalidSessionIdError): # and not self.__is_app:
+        if isinstance(err, WDAInvalidSessionIdError):  # and not self.__is_app:
             self.session_id = None
             return Callback.RET_RETRY
         if isinstance(err, WDAPossiblyCrashedError):
-            self.session_id = self.session().session_id # generate new sessionId
+            self.session_id = self.session().session_id  # generate new sessionId
             return Callback.RET_RETRY
         """ 等待设备恢复上线 """
 
@@ -306,7 +307,8 @@ class BaseClient(object):
         Args:
             filename: json log
         """
-        self.register_callback(Callback.HTTP_REQUEST_BEFORE, self._callback_json_report)
+        self.register_callback(
+            Callback.HTTP_REQUEST_BEFORE, self._callback_json_report)
 
     def is_ready(self) -> bool:
         try:
@@ -432,7 +434,7 @@ class BaseClient(object):
         return namedtuple("HTTPRequest", ['fetch', 'get', 'post'])(
             self._fetch,
             functools.partial(self._fetch, "GET"),
-            functools.partial(self._fetch, "POST")) # yapf: disable
+            functools.partial(self._fetch, "POST"))  # yapf: disable
 
     @property
     def _session_http(self):
@@ -440,7 +442,7 @@ class BaseClient(object):
             functools.partial(self._fetch, with_session=True),
             functools.partial(self._fetch, "GET", with_session=True),
             functools.partial(self._fetch, "POST", with_session=True),
-            functools.partial(self._fetch, "DELETE", with_session=True)) # yapf: disable
+            functools.partial(self._fetch, "DELETE", with_session=True))  # yapf: disable
 
     def home(self):
         """Press home button"""
@@ -498,10 +500,10 @@ class BaseClient(object):
         Args:
             png_filename(string): optional, save file name
             format(string): return format, "raw" or "pillow” (default)
-        
+
         Returns:
             PIL.Image or raw png data
-        
+
         Raises:
             WDARequestError
         """
@@ -664,7 +666,7 @@ class BaseClient(object):
     def scale(self):
         """
         UIKit scale factor
-        
+
         Refs:
             https://developer.apple.com/library/archive/documentation/DeviceInformation/Reference/iOSDeviceCompatibility/Displays/Displays.html
         There is another way to get scale
@@ -728,7 +730,7 @@ class BaseClient(object):
         """
         Args:
             callback (func): called when alert popup
-        
+
         Example of callback:
 
             def callback(session):
@@ -736,12 +738,12 @@ class BaseClient(object):
         """
         pass
 
-    #Not working
-    #def get_clipboard(self):
+    # Not working
+    # def get_clipboard(self):
     #    return self.http.post("/wda/getPasteboard").value
 
     # Not working
-    #def siri_activate(self, text):
+    # def siri_activate(self, text):
     #    self.http.post("/wda/siri/activate", {"text": text})
 
     def app_launch(self,
@@ -786,7 +788,7 @@ class BaseClient(object):
                 "value": 4,
                 "sessionId": "0363BDC5-4335-47ED-A54E-F7CCB65C6A65"
             }
-        
+
         value 1(not running) 2(running in background) 3(running in foreground)
         """
         return self._session_http.post("/wda/apps/state", {
@@ -812,7 +814,7 @@ class BaseClient(object):
 
         Returns:
             list of app
-        
+
         Return example:
             [{'pid': 52, 'bundleId': 'com.apple.springboard'}]
         """
@@ -824,7 +826,7 @@ class BaseClient(object):
         https://github.com/facebook/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBSessionCommands.m#L43
         Args:
             url (str): url
-        
+
         Raises:
             WDARequestError
         """
@@ -857,7 +859,7 @@ class BaseClient(object):
     def click(self, x, y, duration: Optional[float] = None):
         """
         Combine tap and tap_hold
-        
+
         Args:
             x, y: can be float(percent) or int
             duration (optional): tap_hold duration
@@ -969,7 +971,7 @@ class BaseClient(object):
         size = self._unsafe_window_size()
         if min(size) > 0:
             return size
-        _ = self.orientation # after this operation, will safe to get window_size
+        _ = self.orientation  # after this operation, will safe to get window_size
         return self._unsafe_window_size()
 
     def _unsafe_window_size(self):
@@ -1051,7 +1053,10 @@ class BaseClient(object):
 
 
 class Alert(object):
-    DEFAULT_ACCEPT_BUTTONS = []
+    DEFAULT_ACCEPT_BUTTONS = [
+        "使用App时允许", "无线局域网与蜂窝网络", "好", "稍后", "稍后提醒", "确定",
+        "允许", "以后", "打开", "录屏", "Allow", "OK", "YES", "Yes", "Later", "Close"
+    ]
 
     def __init__(self, client: BaseClient):
         self._c = client
@@ -1087,35 +1092,54 @@ class Alert(object):
     def buttons(self):
         return self.http.get('/wda/alert/buttons').value
 
-    def click(self, button_name: Union[str, list]):
+    def click(self, button_name: Optional[Union[str, list]] = None):
         """
         Args:
             - button_name: the name of the button
+
+        Returns:
+            button_name being clicked
 
         Raises:
             ValueError when button_name is not in avaliable button names
         """
         # Actually, It has no difference POST to accept or dismiss
         if isinstance(button_name, str):
-            return self.http.post('/alert/accept', data={"name": button_name})
+            self.http.post('/alert/accept', data={"name": button_name})
+            return button_name
+
         avaliable_names = self.buttons()
-        for bname in button_name:
+        buttons: list = button_name
+        for bname in buttons:
             if bname in avaliable_names:
-                return self.http.post('/alert/accept', data={"name": bname})
+                return self.click(bname)
         raise ValueError("Only these buttons can be clicked", avaliable_names)
+
+    def click_exists(self, buttons: Optional[Union[str, list]] = None):
+        """
+         Args:
+            - buttons: the name of the button of list of names
+
+        Returns:
+            button_name clicked or None
+        """
+        try:
+            return self.click(buttons)
+        except ValueError:
+            return None
 
     @contextlib.contextmanager
     def watch_and_click(self,
-                        buttons: Optional[list] = [
-                            "使用App时允许", "无线局域网与蜂窝网络", "好", "稍后", "稍后提醒", "确定",
-                            "允许", "以后", "打开", "录屏", "Allow", "OK", "YES", "Yes", "Later", "Close"
-                        ],
+                        buttons: Optional[list] = None,
                         interval: float = 2.0):
         """ watch and click button
         Args:
             buttons: buttons name which need to click
             interval: check interval
         """
+        if not buttons:
+            buttons = self.DEFAULT_ACCEPT_BUTTONS
+
         event = threading.Event()
 
         def _inner():
@@ -1194,14 +1218,14 @@ class Selector(object):
             xpath (str): xpath string, a little slow, but works fine
             timeout (float): maxium wait element time, default 10.0s
             index (int): index of founded elements
-        
+
         WDA use two key to find elements "using", "value"
         Examples:
         "using" can be on of 
             "partial link text", "link text"
             "name", "id", "accessibility id"
             "class name", "class chain", "xpath", "predicate string"
-        
+
         predicate string support many keys
             UID,
             accessibilityContainer,
@@ -1290,7 +1314,7 @@ class Selector(object):
         """
         Returns:
             element_ids (list(string)): example ['id1', 'id2']
-        
+
         HTTP example response:
         [
             {"ELEMENT": "E2FF5B2A-DBDF-4E67-9179-91609480D80A"},
@@ -1440,7 +1464,7 @@ class Selector(object):
 
         Args:
             timeout (float): timeout for wait
-        
+
         Returns:
             bool: if successfully clicked
         """
@@ -1455,7 +1479,7 @@ class Selector(object):
         Args:
             timeout (float): timeout seconds
             raise_error (bool): default true, whether to raise error if element not found
-        
+
         Raises:
             WDAElementNotFoundError
         """
@@ -1466,7 +1490,7 @@ class Selector(object):
         Args:
             timeout (float): default timeout
             raise_error (bool): return bool or raise error
-        
+
         Returns:
             bool: works when raise_error is False
 
@@ -1619,7 +1643,7 @@ class Element(object):
         Args:
             direction (str): one of "visible", "up", "down", "left", "right"
             distance (float): swipe distance, only works when direction is not "visible"
-               
+
         Raises:
             ValueError
 
@@ -1652,7 +1676,7 @@ class Element(object):
         Args:
             scale (float): scale must > 0
             velocity (float): velocity must be less than zero when scale is less than 1
-        
+
         Example:
             pinchIn  -> scale:0.5, velocity: -1
             pinchOut -> scale:2.0, velocity: 1
@@ -1675,6 +1699,7 @@ class Element(object):
 
 class USBClient(Client):
     """ connect device through unix:/var/run/usbmuxd """
+
     def __init__(self, udid: str = "", port: int = 8100, wda_bundle_id=None):
         super().__init__(url="usbmux://{}:{}".format(udid, port))
         self.__udid = udid
@@ -1702,4 +1727,3 @@ class USBClient(Client):
         time.sleep(3)
         assert p.poll() is None
         return self.wait_ready()
-
