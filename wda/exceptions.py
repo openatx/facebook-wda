@@ -85,3 +85,10 @@ class WDAUnknownError(WDARequestError):
     @staticmethod
     def check(v: dict):
         return v.get("error") == "unknown error"
+
+
+class WDAStaleElementReferenceError(WDARequestError):
+    """ error: 'stale element reference' """
+    @staticmethod
+    def check(v: dict):
+        return v.get("error") == 'stale element reference'

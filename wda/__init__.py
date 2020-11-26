@@ -169,7 +169,7 @@ def _unsafe_httpdo(url, method='GET', data=None, timeout=None):
             value = r.value.copy()
             value.pop("traceback", None)
 
-            for errCls in (WDAInvalidSessionIdError, WDAPossiblyCrashedError, WDAKeyboardNotPresentError, WDAUnknownError):
+            for errCls in (WDAInvalidSessionIdError, WDAPossiblyCrashedError, WDAKeyboardNotPresentError, WDAUnknownError, WDAStaleElementReferenceError):
                 if errCls.check(value):
                     raise errCls(status, value)
 
@@ -1125,7 +1125,7 @@ class Alert(object):
         """
         try:
             return self.click(buttons)
-        except ValueError:
+        except (ValueError, WDARequestError):
             return None
 
     @contextlib.contextmanager
@@ -1360,6 +1360,7 @@ class Selector(object):
             chain = chain + '[%d]' % self._index
         return chain
 
+    @retry.retry(WDAStaleElementReferenceError, tries=3, delay=.5, jitter=.2)
     def find_element_ids(self):
         elems = []
         if self._id:
