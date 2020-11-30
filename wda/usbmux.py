@@ -134,16 +134,14 @@ class Usbmux:
     def device_list(self):
         """
         Return example:
-        {'DeviceList': [{'DeviceID': 37,
-                'MessageType': 'Attached',
-                'Properties': {'ConnectionSpeed': 480000000,
-                            'ConnectionType': 'USB',
-                            'DeviceID': 37,
-                            'LocationID': 123456,
-                            'ProductID': 4776,
-                            'SerialNumber': 'xxx',
-                            'UDID': 'xxx',
-                            'USBSerialNumber': 'xxx'}}]}
+        [{'ConnectionSpeed': 480000000,
+          'ConnectionType': 'USB',
+          'DeviceID': 37,
+          'LocationID': 123456,
+          'ProductID': 4776,
+          'SerialNumber': 'xxx',
+          'UDID': 'xxx',
+          'USBSerialNumber': 'xxx'}}]}
         """
         payload = {
             "MessageType": "ListDevices",  # 必选

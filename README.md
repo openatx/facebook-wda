@@ -510,6 +510,19 @@ with c.alert.watch_and_click(interval=2.0): # default check every 2.0s
 ```python
 c = wda.Client()
 
+# 使用Example
+def device_offline_callback(client, err):
+	if isinstance(err, requests.ConnectionError, wda.WDABadGateway, requests.ReadTimeout):
+		print("Handle device offline")
+		ok = client.wait_ready(60) # 等待60s恢复
+		if not ok:
+			return wda.Callback.RET_ABORT
+		return wda.Callback.RET_RETRY
+
+c.register_callback(wda.Callback.ERROR, device_offline_callback, try_first=True)
+# try_first 优先使用device_offline_callback函数处理ERROR
+
+
 # the argument name in callback function can be one of
 # - client: wda.Client
 # - url: str, eg: http://localhost:8100/session/024A4577-2105-4E0C-9623-D683CDF9707E/wda/keys
@@ -524,6 +537,7 @@ def _cb(client: wda.Client, url: str):
 		print("send_keys called")
 
 c.register_callback(wda.Callback.HTTP_REQUEST_BEFORE, _cb)
+c.register_callback(wda.Callback.HTTP_REQUEST_BEFORE, lambda url: print(url), try_first=True) # 回调会比_cb更先回调
 c.send_keys("Hello")
 
 # unregister

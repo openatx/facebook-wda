@@ -27,6 +27,7 @@ from deprecated import deprecated
 from six.moves import urllib
 
 from . import requests_usbmux, xcui_element_types
+from .usbmux import Usbmux
 from ._proto import *
 from .exceptions import *
 from .utils import inject_call, limit_call_depth
@@ -226,6 +227,27 @@ class Rect(list):
         return self.y + self.height
 
 
+def _start_wda_xctest(udid: str, wda_bundle_id=None) -> bool:
+    import shutil
+    import subprocess
+
+    tins_path = shutil.which("tins")
+    if not tins_path:
+        return False
+    logger.info("WDA is not running, exec: tins xctest")
+    args = []
+    if udid:
+        args.extend(['-u', udid])
+    args.append('xctest')
+    if wda_bundle_id:
+        args.extend(['-B', wda_bundle_id])
+    p = subprocess.Popen([tins_path] + args)
+    time.sleep(3)
+    if p.poll() is not None:
+        logger.warning("tins xctest launch failed")
+        return False
+    return True
+
 class BaseClient(object):
     def __init__(self, url=None, _session_id=None):
         """
@@ -249,6 +271,13 @@ class BaseClient(object):
 
         if not _session_id:
             self._init_callback()
+
+        # u = urllib.parse.urlparse(self.__wda_url)
+        # if u.scheme == "usbmux" and not self.is_ready():
+        #     udid = u.netloc.split(":")[0]
+        #     if _start_wda_xctest(udid):
+        #         self.wait_ready()
+                # raise RuntimeError("xctest start failed")
 
     def _callback_fix_invalid_session_id(self, err: WDAError):
         """ 当遇到 invalid session id错误时，更新session id并重试 """
@@ -350,8 +379,11 @@ class BaseClient(object):
         # Can't use res.value['sessionId'] = ...
         return res.value
 
-    def register_callback(self, event_name: str, func: Callable):
-        self.__callbacks[event_name].append(func)
+    def register_callback(self, event_name: str, func: Callable, try_first: bool = False):
+        if try_first:
+            self.__callbacks[event_name].insert(0, func)
+        else:
+            self.__callbacks[event_name].append(func)
 
     def unregister_callback(self,
                             event_name: Optional[str] = None,
@@ -830,6 +862,8 @@ class BaseClient(object):
         Raises:
             WDARequestError
         """
+        if os.getenv("TMQ_ORIGIN") == "civita": # MDS platform
+            return self.http.post("/mds/openurl", {"url": url})
         return self._session_http.post('url', {'url': url})
 
     def deactivate(self, duration):
@@ -1702,29 +1736,15 @@ class USBClient(Client):
     """ connect device through unix:/var/run/usbmuxd """
 
     def __init__(self, udid: str = "", port: int = 8100, wda_bundle_id=None):
+        if not udid:
+            usbmux = Usbmux()
+            infos = usbmux.device_list()
+            if len(infos) == 0:
+                raise RuntimeError("no device connected")
+            elif len(infos) >= 2:
+                raise RuntimeError("more then one device connected")
+            udid = infos[0]['SerialNumber']
+
         super().__init__(url="usbmux://{}:{}".format(udid, port))
-        self.__udid = udid
-        self.__wda_bundle_id = wda_bundle_id
-
         if not self.is_ready():
-            self._start_xctest()
-
-    def _start_xctest(self) -> bool:
-        import shutil
-        import subprocess
-        tins_path = shutil.which("tins")
-        if not tins_path:
-            return False
-
-        logger.info("WDA is not running, exec: tins xctest")
-        args = []
-        if self.__udid:
-            args.extend(['-u', self.__udid])
-        args.append('xctest')
-        if self.__wda_bundle_id:
-            args.extend(['-B', self.__wda_bundle_id])
-
-        p = subprocess.Popen([tins_path] + args)
-        time.sleep(3)
-        assert p.poll() is None
-        return self.wait_ready()
+            _start_wda_xctest(udid, wda_bundle_id)
