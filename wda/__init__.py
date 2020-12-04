@@ -24,7 +24,6 @@ import requests
 import retry
 import six
 from deprecated import deprecated
-from six.moves import urllib
 
 from . import requests_usbmux, xcui_element_types
 from .usbmux import Usbmux
@@ -695,17 +694,20 @@ class BaseClient(object):
         return self.session_id
 
     @cached_property
-    def scale(self):
+    def scale(self) -> int:
         """
         UIKit scale factor
 
         Refs:
             https://developer.apple.com/library/archive/documentation/DeviceInformation/Reference/iOSDeviceCompatibility/Displays/Displays.html
         There is another way to get scale
-            self.http.get("/wda/screen").value returns {"statusBarSize": {'width': 320, 'height': 20}, 'scale': 2}
+            self._session_http.get("/wda/screen").value returns {"statusBarSize": {'width': 320, 'height': 20}, 'scale': 2}
         """
-        v = max(self.screenshot().size) / max(self.window_size())
-        return round(v)
+        try:
+            return self._session_http.get("/wda/screen").value['scale']
+        except (KeyError, WDARequestError):
+            v = max(self.screenshot().size) / max(self.window_size())
+            return round(v)
 
     @cached_property
     def bundle_id(self):
@@ -1005,8 +1007,14 @@ class BaseClient(object):
         size = self._unsafe_window_size()
         if min(size) > 0:
             return size
-        _ = self.orientation  # after this operation, will safe to get window_size
-        return self._unsafe_window_size()
+        _ = self.orientation  # after this operation, may safe to get window_size
+        size = self._unsafe_window_size()
+        if min(size) > 0:
+            return size
+
+        logger.warning("unable to get window_size() have to create a new session")
+        with self.session("com.apple.Preferences") as app:
+            return app.window_size()
 
     def _unsafe_window_size(self):
         """
