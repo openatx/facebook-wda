@@ -4,8 +4,8 @@
 from __future__ import print_function, unicode_literals
 
 import base64
-import copy
 import contextlib
+import copy
 import enum
 import functools
 import io
@@ -13,6 +13,8 @@ import json
 import logging
 import os
 import re
+import shutil
+import subprocess
 import threading
 import time
 from collections import defaultdict, namedtuple
@@ -26,9 +28,9 @@ import six
 from deprecated import deprecated
 
 from . import requests_usbmux, xcui_element_types
-from .usbmux import Usbmux
 from ._proto import *
 from .exceptions import *
+from .usbmux import Usbmux
 from .utils import inject_call, limit_call_depth
 
 try:
@@ -38,6 +40,7 @@ except ImportError:
 
 try:
     import sys
+
     import logzero
     if not (hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()):
         log_format = '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s'
@@ -227,9 +230,6 @@ class Rect(list):
 
 
 def _start_wda_xctest(udid: str, wda_bundle_id=None) -> bool:
-    import shutil
-    import subprocess
-
     tins_path = shutil.which("tins")
     if not tins_path:
         return False
@@ -1754,5 +1754,12 @@ class USBClient(Client):
             udid = infos[0]['SerialNumber']
 
         super().__init__(url="usbmux://{}:{}".format(udid, port))
-        if not self.is_ready():
-            _start_wda_xctest(udid, wda_bundle_id)
+        if self.is_ready():
+            return
+
+        if shutil.which("tins"):
+            ok = _start_wda_xctest(udid, wda_bundle_id)
+            if not ok:
+                raise RuntimeError("init wda xctest error")
+            if not self.wait_ready(timeout=20):
+                raise RuntimeError("wda xctest launched but check failed")
