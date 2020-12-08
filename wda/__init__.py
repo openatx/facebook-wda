@@ -1012,9 +1012,14 @@ class BaseClient(object):
         if min(size) > 0:
             return size
 
+        #if self.alert.exists:
+        #    self.alert.accept()
+
         logger.warning("unable to get window_size() have to create a new session")
         with self.session("com.apple.Preferences") as app:
-            return app.window_size()
+            size = app._unsafe_window_size()
+            assert min(size) > 0, "unable to get window_size"
+            return size
 
     def _unsafe_window_size(self):
         """
