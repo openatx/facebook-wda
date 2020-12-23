@@ -796,6 +796,10 @@ class BaseClient(object):
         assert isinstance(arguments, (tuple, list))
         assert isinstance(environment, dict)
 
+        # When device is locked, it is unable to launch
+        if self.locked():
+            self.unlock()
+
         return self._session_http.post(
             "/wda/apps/launch", {
                 "bundleId": bundle_id,
@@ -1525,14 +1529,14 @@ class Selector(object):
         e.click()
         return True
 
-    def wait(self, timeout=None, raise_error=True):
+    def wait(self, timeout=None, raise_error=False):
         """ alias of get
         Args:
             timeout (float): timeout seconds
-            raise_error (bool): default true, whether to raise error if element not found
+            raise_error (bool): default false, whether to raise error if element not found
 
-        Raises:
-            WDAElementNotFoundError
+        Returns:
+            Element or None
         """
         return self.get(timeout=timeout, raise_error=raise_error)
 

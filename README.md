@@ -352,7 +352,11 @@ To see more `Class Chain Queries` examples, view <https://github.com/facebookarc
 
 ### Get Element info
 ```python
+# if not found, raise WDAElementNotFoundError
 e = s(text='Dashboard').get(timeout=10.0)
+
+# e could be None if not exists
+e = s(text='Dashboard').wait(timeout=10.0)
 
 # get element attributes
 e.className # XCUIElementTypeStaticText
