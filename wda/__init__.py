@@ -357,7 +357,7 @@ class BaseClient(object):
         def _dprint(message: str):
             if noprint:
                 return
-            print(time.ctime(), message)
+            print("facebook-wda", time.ctime(), message)
 
         _dprint("Wait ready (timeout={:.1f})".format(timeout))
         while time.time() < deadline:
@@ -365,8 +365,7 @@ class BaseClient(object):
                 _dprint("device back online")
                 return True
             else:
-                _dprint("wait_ready left {:.1f} seconds".format(deadline -
-                                                                time.time()))
+                _dprint("{!r} wait_ready left {:.1f} seconds".format(self.__wda_url, deadline - time.time()))
                 time.sleep(1.0)
         _dprint("device still offline")
         return False
