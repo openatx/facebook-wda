@@ -160,7 +160,10 @@ def _unsafe_httpdo(url, method='GET', data=None, timeout=None):
 
     if DEBUG:
         ms = (time.time() - start) * 1000
-        print('Return ({:.0f}ms): {}'.format(ms, response.text))
+        response_text = response.text
+        if url.endswith("/screenshot"):
+            response_text = response_text[:100] + "..." # limit length of screenshot response
+        print('Return ({:.0f}ms): {}'.format(ms, response_text))
 
     try:
         retjson = response.json()
@@ -181,7 +184,7 @@ def _unsafe_httpdo(url, method='GET', data=None, timeout=None):
     except JSONDecodeError:
         if response.text == "":
             raise WDAEmptyResponseError(method, url, data)
-        raise WDAError(method, url, response.text)
+        raise WDAError(method, url, response.text[:100] + "...") # should not too long
     except requests.ConnectionError as e:
         raise WDAError("Failed to establish connection to to WDA")
 
