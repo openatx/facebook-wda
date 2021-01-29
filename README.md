@@ -18,6 +18,11 @@ Tested with: <https://github.com/appium/WebDriverAgent/tree/v2.16.1>
 ## Installation
 1. You need to start WebDriverAgent by yourself
 
+	**New** There is a new tool, which can start WDA without xcodebuild, even you can run in Linux and Windows.
+	See: <https://github.com/alibaba/tidevice>
+
+	Or
+
 	Follow the instructions in <https://github.com/appium/WebDriverAgent>
 
 	It is better to start with Xcode to prevent CodeSign issues.

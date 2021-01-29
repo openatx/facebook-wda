@@ -18,7 +18,7 @@ try:
 except ImportError:
     import httplib
 
-DEFAULT_SCHEME = "usbmux"
+DEFAULT_SCHEME = "http+usbmux://"
 
 
 _usbmux = usbmux.Usbmux()
