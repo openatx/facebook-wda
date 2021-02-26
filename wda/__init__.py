@@ -293,7 +293,7 @@ class BaseClient(object):
         """ 等待设备恢复上线 """
 
     def _callback_wait_ready(self, err):
-        logger.warning("Error: %s", err)
+        # logger.warning("Error: %s", err) # too noisy
         if isinstance(err, (ConnectionError, requests.ConnectionError,
                             requests.ReadTimeout, WDABadGateway)):
             if not self.wait_ready(DEVICE_WAIT_TIMEOUT):  # 等待设备恢复在线
