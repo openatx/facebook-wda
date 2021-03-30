@@ -8,11 +8,12 @@ import os
 
 @pytest.fixture
 def c():
+    if os.getenv("DEVICE_URL"):
+        return wda.Client(os.getenv("DEVICE_URL"))
     return wda.USBClient()
 
-    wda.DEBUG = True
-    __target = os.getenv("DEVICE_URL") or 'http://localhost:8100'
-    return wda.Client(__target)
+    #wda.DEBUG = True
+    #__target = os.getenv("DEVICE_URL") or 'http://localhost:8100'
 
 
 @pytest.fixture(scope="function")
