@@ -153,6 +153,9 @@ c.locked() # true of false
 c.lock() # lock screen
 c.unlock() # unlock
 c.app_current() # {"pid": 1281, "bundleId": "com.netease.cloudmusic"}
+
+# OpenURL not working very well
+c.open_url("taobao://m.taobao.com/index.htm")
 ```
 
 Take screenshot save as png
