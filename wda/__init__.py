@@ -21,7 +21,6 @@ from collections import defaultdict, namedtuple
 from typing import Callable, Optional, Union
 from urllib.parse import urlparse
 
-import attrdict
 import requests
 import retry
 import six
@@ -76,11 +75,18 @@ class Callback(str, enum.Enum):
     RET_CONTINUE = "::continue"
 
 
+class AttrDict(dict):
+    def __getattr__(self, key):
+        if isinstance(key, str) and key in self:
+            return self[key]
+        raise AttributeError("Attribute key not found", key)
+
+
 def convert(dictionary):
     """
     Convert dict to namedtuple
     """
-    return attrdict.AttrDict(dictionary)
+    return AttrDict(dictionary)
 
     # Old implement
     # return namedtuple('GenericDict', list(dictionary.keys()))(**dictionary)
@@ -112,7 +118,7 @@ def namedlock(name):
     return namedlock.locks[name]
 
 
-def httpdo(url, method="GET", data=None, timeout=None) -> attrdict.AttrDict:
+def httpdo(url, method="GET", data=None, timeout=None) -> AttrDict:
     """
     thread safe http request
 
@@ -426,7 +432,7 @@ class BaseClient(object):
                urlpath: str,
                data: Optional[dict] = None,
                with_session: bool = False,
-               timeout: Optional[float] = None) -> attrdict.AttrDict:
+               timeout: Optional[float] = None) -> AttrDict:
         """ do http request """
         urlpath = "/" + urlpath.lstrip("/")  # urlpath always startswith /
 
