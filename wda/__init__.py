@@ -1066,6 +1066,35 @@ class BaseClient(object):
                 f"Invalid name: {name}, should be one of {valid_names}")
         self._session_http.post("/wda/pressButton", {"name": name})
 
+    def press_duration(self, name: str, duration: float):
+        """
+        Args:
+            name: one of <home|volumeUp|volumeDown|power|snapshot>
+            duration: seconds
+
+        Notes:
+            snapshot equals power+home
+
+        Raises:
+            ValueError
+
+        Refs:
+            https://github.com/appium/WebDriverAgent/pull/494/files
+        """
+        hid_usages = {
+            "home": 0x40,
+            "volumeup": 0xE9,
+            "volumedown": 0xEA,
+            "power": 0x30,
+            "snapshot": 0x65,
+            "power+home": 0x65
+        }
+        name = name.lower()
+        if name not in hid_usages:
+            raise ValueError("Invalid name:", name)
+        hid_usage = hid_usages[name]
+        return self._session_http.post("/wda/performIoHidEvent", {"page": 0x0C, "usage": hid_usage, "duration": duration})
+
     def keyboard_dismiss(self):
         """
         Not working for now

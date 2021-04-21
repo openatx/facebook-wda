@@ -300,6 +300,11 @@ s.tap_hold(x, y, 1.0)
 s.press("home") # fater then s.home()
 s.press("volumeUp")
 s.press("volumeDown")
+
+# New in WebDriverAgent(3.8.0)
+# long press home, volumeUp, volumeDown, power, snapshot(power+home)
+s.press_duration("volumeUp", 1) # long press for 1 second
+s.press_duration("snapshot", 0.1)
 ```
 
 ### Find element
