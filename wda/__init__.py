@@ -1439,7 +1439,7 @@ class Selector(object):
         if self._value:
             qs.append("value == '%s'" % self._value)
         if self._value_part:
-            qs.append("value CONTAINS ’%s'" % self._value_part)
+            qs.append("value CONTAINS '%s'" % self._value_part)
         if self._visible is not None:
             qs.append("visible == %s" % 'true' if self._visible else 'false')
         if self._enabled is not None:
