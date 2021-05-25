@@ -562,7 +562,8 @@ class BaseClient(object):
         elif format == 'pillow':
             from PIL import Image
             buff = io.BytesIO(raw_value)
-            return Image.open(buff)
+            im = Image.open(buff)
+            return im.convert("RGB") # convert to RGB to fix save jpeg error
         else:
             raise ValueError("unknown format")
 
