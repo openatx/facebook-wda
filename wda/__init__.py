@@ -1125,7 +1125,7 @@ class BaseClient(object):
             kwargs['timeout'] = self.__timeout
         return Selector(self, *args, **kwargs)
 
-    @property
+    @cached_property
     def alibaba(self):
         """ Only used in alibaba company """
         try:
@@ -1135,7 +1135,7 @@ class BaseClient(object):
             raise RuntimeError(
                 "@alibaba property requires wda_taobao library installed")
 
-    @property
+    @cached_property
     def taobao(self):
         try:
             import wda_taobao
