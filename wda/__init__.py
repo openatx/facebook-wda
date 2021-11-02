@@ -238,21 +238,26 @@ class Rect(list):
         return self.y + self.height
 
 
-def _start_wda_xctest(udid: str, wda_bundle_id=None) -> bool:
+def _start_wda_proxy(udid: str, port: int = None, wda_bundle_id=None) -> bool:
     xctool_path = shutil.which("tins2") or shutil.which("tidevice")
     if not xctool_path:
         return False
-    logger.info("WDA is not running, exec: {} xctest".format(xctool_path))
+    if port==8100:
+        logger.info("WDA is not running, exec: {} wdaproxy".format(xctool_path))
+    else:
+        logger.info("WDA is not running, exec: {} wdaproxy --port {}".format(xctool_path, port))
     args = []
     if udid:
         args.extend(['-u', udid])
-    args.append('xctest')
+    args.append('wdaproxy')
     if wda_bundle_id:
         args.extend(['-B', wda_bundle_id])
+    if port != 8100:
+        args.extend(['--port', str(port)])
     p = subprocess.Popen([xctool_path] + args)
     time.sleep(3)
     if p.poll() is not None:
-        logger.warning("xctest launch failed")
+        logger.warning("wdaproxy launch failed")
         return False
     return True
 
@@ -1314,7 +1319,7 @@ class Selector(object):
 
         WDA use two key to find elements "using", "value"
         Examples:
-        "using" can be on of 
+        "using" can be on of
             "partial link text", "link text"
             "name", "id", "accessibility id"
             "class name", "class chain", "xpath", "predicate string"
@@ -1804,10 +1809,10 @@ class USBClient(Client):
                 raise RuntimeError("more then one device connected")
             udid = infos[0]['SerialNumber']
 
-        super().__init__(url=requests_usbmux.DEFAULT_SCHEME + "{}:{}".format(udid, port))
+        super().__init__(url="http://" + "{}:{}".format("localhost", port))
         if self.is_ready():
             return
 
-        _start_wda_xctest(udid, wda_bundle_id)
+        _start_wda_proxy(udid, port, wda_bundle_id)
         if not self.wait_ready(timeout=20):
-            raise RuntimeError("wda xctest launched but check failed")
+            raise RuntimeError("wda proxy launched but check failed")
