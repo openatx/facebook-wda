@@ -103,3 +103,7 @@ class Session(requests.Session):
     def __init__(self, url_scheme=DEFAULT_SCHEME, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mount(url_scheme, UsbmuxAdapter())
+
+        # set NO_PROXY to skip proxy check
+        # For some computer urllib.request.proxy_bypass is very slow
+        self.proxies.update({"no_proxy": "*"})
