@@ -107,3 +107,4 @@ class Session(requests.Session):
         # set NO_PROXY to skip proxy check
         # For some computer urllib.request.proxy_bypass is very slow
         self.proxies.update({"no_proxy": "*"})
+        self.trust_env = False
