@@ -1485,12 +1485,14 @@ class Selector(object):
     def count(self):
         return len(self.find_element_ids())
 
-    def get(self, timeout=None, raise_error=True):
+    def get(self, timeout=None, raise_error=True, order=1, retry=1):
         """
         Args:
             timeout (float): timeout for query element, unit seconds
                 Default 10s
             raise_error (bool): whether to raise error if element not found
+            order (int): if find more than one element, choose the specific by use order. range: [1,n]
+            retry (int):  dynamic change sleep time
 
         Returns:
             Element: UI Element
@@ -1501,13 +1503,17 @@ class Selector(object):
         start_time = time.time()
         if timeout is None:
             timeout = self._timeout
+        internal = timeout / retry
         while True:
             elems = self.find_elements()
             if len(elems) > 0:
-                return elems[0]
+                if order - 1 < len(elems):
+                    return elems[order - 1]
+                else:
+                    return elems[0]
             if start_time + timeout < time.time():
                 break
-            time.sleep(0.5)
+            time.sleep(internal)
 
         if raise_error:
             raise WDAElementNotFoundError("element not found",
