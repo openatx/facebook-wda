@@ -782,10 +782,29 @@ class BaseClient(object):
         """
         pass
 
-    # Not working
-    # def get_clipboard(self):
-    #    return self.http.post("/wda/getPasteboard").value
+    def get_clipboard(self, wda_bundle_id):
+        """ Get clipboard text.
 
+        If you want to use this function, you have to set wda foreground which would switch the 
+        current screen of the phone. Then we will try to switch back to the screen before.
+
+        Args:
+            wda_bundle_id: The bundle id of the started wda.
+
+        Returns:
+            Clipboard text.
+        """
+        current_app_bundle_id = self.app_current().get("bundleId", "")
+        # Set wda foreground, it's necessary.
+        try:
+            self.app_launch(wda_bundle_id)
+        except:
+            pass
+        clipboard_text = self._session_http.post("/wda/getPasteboard").value
+        # Switch back to the screen before.
+        self.app_launch(current_app_bundle_id)
+        return base64.b64decode(clipboard_text).decode('utf-8')
+    
     # Not working
     # def siri_activate(self, text):
     #    self.http.post("/wda/siri/activate", {"text": text})
