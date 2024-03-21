@@ -13,7 +13,7 @@ struct ListView: View {
     var body: some View {
         List(1...100, id: \.self) { number in
             Text("Row\(number)")
-        }
+        }.accessibilityLabel("LIST_CONTAINER")
         .navigationBarTitle("Numbers List", displayMode: .inline)
     }
 }
