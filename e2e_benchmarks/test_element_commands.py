@@ -1,12 +1,11 @@
 '''
 WDA Element Command Testing
 source code here: https://github.com/appium/WebDriverAgent/blob/master/WebDriverAgentLib/Commands/FBElementCommands.m
-WDA API document and example(not offical): https://documenter.getpostman.com/view/1837823/TVmMhJNBa17feaf2-237e-4fe7-8e2f-75f132420d26
+WDA API document and example(not offical): https://documenter.getpostman.com/view/1837823/TVmMhJNB#f68f7fd9-3a08-4a0b-9253-f1bedf0ae926
 '''
 import os
 import pytest
 import unittest
-import jsonschema
 import wda
 from .constant import *
 
@@ -25,7 +24,7 @@ class TestElement(unittest.TestCase):
         self.wda_client.close()
         [os.remove(temp_file) for temp_file in [self.temp_file_pic] if os.path.exists(temp_file)]
 
-    
+
     '''
      Method: GET 
      Endpoint: {{baseURL}}/session/{{sessionId}}/window/size
@@ -47,6 +46,7 @@ class TestElement(unittest.TestCase):
     def test_btn_enable(self):
         assert self.app(text='DISABLED_BTN').enabled == False
 
+
     '''
      Method: GET 
      Endpoint: {{baseURL}}/session/{{sessionId}}/element/{{uuid}}/rect
@@ -59,6 +59,7 @@ class TestElement(unittest.TestCase):
             hasattr(rect, 'width') and type(rect.width) == int,
             hasattr(rect, 'height') and type(rect.height) == int,
         ])
+
 
     '''
      Method: GET 
@@ -94,7 +95,6 @@ class TestElement(unittest.TestCase):
         self.assertEqual(self.app(text='HIDDEN_BTN').displayed, False)
 
 
-
     '''
      Method: GET 
      Endpoint: {{baseURL}}/session/{{sessionId}}/element/{{uuid}}/selected
@@ -105,7 +105,7 @@ class TestElement(unittest.TestCase):
     def test_attribute_btn_not_displayed(self):
         self.assertEqual(self.app(text='UNCHECKED_BTN').selected(), False)
 
-    
+
     '''
      Method: GET 
      Endpoint: {{baseURL}}/session/{{sessionId}}/element/{{uuid}}/name
@@ -125,6 +125,7 @@ class TestElement(unittest.TestCase):
     def test_input_text(self):
         self.app(id='INPUT_FIELD').set_text('test')
         self.assertEqual(self.app(id='INPUT_FIELD').value, 'test')
+
 
     '''
      Method: POST 
@@ -158,7 +159,7 @@ class TestElement(unittest.TestCase):
         self.app.screenshot(png_filename=self.temp_file_pic)
         assert os.path.exists(self.temp_file_pic)
 
-    
+
     '''
      Method: POST 
      Endpoint: {{baseURL}}/session/{{sessionId}}/screenshot/{{uuid}}
@@ -166,7 +167,7 @@ class TestElement(unittest.TestCase):
     '''
     @pytest.mark.skip('NOT IMPLEMENTED')
     def test_screenshot_element(self):
-        ...
+        pass
 
 
     '''
@@ -180,11 +181,13 @@ class TestElement(unittest.TestCase):
         self.assertTrue(self.app(text='ENABLED_BTN').accessible)
 
 
-    
     '''
     Method: POST 
     Endpoint: {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/accessibilityContainer
     NOTE Swift accessibility Container is not useful, always return false.
+    
+    Example:
+    ```
     import SwiftUI
 
     struct ContentView: View {
@@ -203,13 +206,16 @@ class TestElement(unittest.TestCase):
         static var previews: some View {
             ContentView()
         }
-    }'''
+    }
+    ```
+    '''
     @pytest.mark.skip('WDA API NOT USEFUL')
     def test_ele_accessibilityContainer_is_true(self):
         self.assertFalse(self.app(id='Combined Items').accessibility_container)
 
     def test_ele_accessibilityContainer_is_false(self):
         self.assertFalse(self.app(id='ENABLED_BTN').accessibility_container)
+
 
     '''
     Method: POST 
@@ -221,7 +227,6 @@ class TestElement(unittest.TestCase):
         self.app(text="Row1").click()
 
 
-
     '''
     Method: POST 
     Endpoint: {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/pinch
@@ -229,6 +234,7 @@ class TestElement(unittest.TestCase):
     @pytest.mark.skip('TODO')
     def test_pinch(self):
         ...
+
 
     '''
      Method: POST 
@@ -242,13 +248,15 @@ class TestElement(unittest.TestCase):
         self.app(text='LONG_TAP_ALERT').tap_hold(duration=2)
         self.assertTrue(self.app(text='LONG_TAP_ALERT_OK').get(timeout=1).displayed) 
 
+
     '''
      Method: POST 
      Endpoint: {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/dragfromtoforduration
     '''
     @pytest.mark.skip('NOT IMPLEMENTED')
     def test_drag_from_to_for_duration(self):
-      ...
+      pass
+
 
     '''
     Method: POST 
@@ -273,6 +281,7 @@ class TestElement(unittest.TestCase):
     def test_ele_select(self):
         pass
 
+
     '''
      Method: POST 
      Endpoint: {{baseURL}}/session/{{sessionId}}/wda/keys
@@ -281,7 +290,8 @@ class TestElement(unittest.TestCase):
         self.app(text='INPUT_FIELD').click()
         self.app.send_keys('hello world')
         self.assertEqual(self.app(text='INPUT_FIELD').value, 'hello world')
-    
+
+
     '''
      Method: POST 
      Endpoint: {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/forceTouch
@@ -289,7 +299,7 @@ class TestElement(unittest.TestCase):
     @pytest.mark.skip('NOT IMPLEMENTED')
     def test_ele_force_touch(self):
         pass
-    
+
 
     '''
      Method: POST 
@@ -302,14 +312,14 @@ class TestElement(unittest.TestCase):
         self.app.double_tap(x, y)
         self.assertTrue(self.app(text='DOUBLE_TAP_ALERT_OK').get(timeout=1).displayed)
 
+
     '''
      Method: POST 
      Endpoint: {{baseURL}}/session/{{sessionId}}/wda/touchAndHold
     '''
-    def test_ele_touble_tap(self):
+    def test_wda_touch_and_hold(self):
         bounds = self.app(text='LONG_TAP_ALERT').bounds
         x = int(bounds.x + bounds.width * 0.5)
         y = int(bounds.y + bounds.height * 0.5)
         self.app.tap_hold(x, y, duration=2)
         self.assertTrue(self.app(text='LONG_TAP_ALERT_OK').get(timeout=1).displayed)
-
