@@ -184,7 +184,6 @@ def _unsafe_httpdo(url, method='GET', data=None, timeout=None):
             for errCls in (WDAInvalidSessionIdError, WDAPossiblyCrashedError, WDAKeyboardNotPresentError, WDAUnknownError, WDAStaleElementReferenceError):
                 if errCls.check(value):
                     raise errCls(status, value)
-
             raise WDARequestError(status, value)
         return r
     except JSONDecodeError:
@@ -645,7 +644,6 @@ class BaseClient(object):
         # when device is Locked, it is unable to start app
         if self.locked():
             self.unlock()
-
         try:
             res = self.http.post('session', payload)
         except WDAEmptyResponseError:
@@ -895,7 +893,7 @@ class BaseClient(object):
                 "TMQ_ORIGIN") == "civita":  # in TMQ and belong to MDS
             return self._session_http.post("/mds/touchAndHold",
                                            dict(x=x, y=y, duration=0.02))
-        return self._session_http.post('/wda/tap/0', dict(x=x, y=y))
+        return self._session_http.post('/wda/tap', dict(x=x, y=y))
 
     def _percent2pos(self, x, y, window_size=None):
         if any(isinstance(v, float) for v in [x, y]):
@@ -1789,6 +1787,12 @@ class Element(object):
 
     # todo lot of other operations
     # tap_hold
+
+    def selected(self):
+        ''' Element has been selected.
+        Returns: bool
+        '''
+        return self._req('get', '/selected').value
 
 
 class USBClient(Client):
