@@ -30,7 +30,7 @@ class TestSessionCommands(unittest.TestCase):
      Method: POST 
      Endpoint: {{baseURL}}/session/{{sessionId}}/url
     '''
-    @pytest.mark.skip("UNKNOW HOW TO TEST")
+    @pytest.mark.skip("UNKNOW HOW TO TEST: [POST] {{baseURL}}/session/{{sessionId}}/url")
     def test_url(self):
         pass
 
@@ -137,7 +137,7 @@ class TestSessionCommands(unittest.TestCase):
      Method: GET 
      Endpoint: {{baseURL}}/session/{{sessionId}}
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [GET] {{baseURL}}/session/{{sessionId}}')
     def test_session_info(self):
         pass
 
@@ -244,7 +244,7 @@ class TestSessionCommands(unittest.TestCase):
      Method: GET
      Endpoint: {{baseURL}}/wda/shutdown
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [GET] {{baseURL}}/wda/shutdown')
     def test_wda_shutdown(self):
         pass
 
@@ -253,6 +253,6 @@ class TestSessionCommands(unittest.TestCase):
      Method: GET
      Endpoint: {{baseURL}}/health
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [GET] {{baseURL}}/health')
     def test_health(self):
         pass

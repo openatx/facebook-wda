@@ -44,7 +44,7 @@ class TestAlert(unittest.TestCase):
     Method: POST
     Endpoint: {{baseURL}}/session/{{sessionId}}/alert/text
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [POST] {{baseURL}}/session/{{sessionId}}/alert/text')
     def test_alert_text_input(self):
        pass
 

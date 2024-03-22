@@ -48,7 +48,7 @@ class TestFindElement(unittest.TestCase):
      Method: GET 
      Endpoint: {{baseURL}}/session/{{sessionId}}/element/{{uuid}}/elements
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [GET] /session/{{sessionId}}/element/{{uuid}}/elements')
     def test_ele_elements(self):
         pass
 
@@ -57,7 +57,7 @@ class TestFindElement(unittest.TestCase):
      Method: GET 
      Endpoint: {{baseURL}}/session/{{sessionId}}/element
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [GET] {{baseURL}}/session/{{sessionId}}/element')
     def test_wda_element(self):
         pass
 
@@ -73,7 +73,7 @@ class TestFindElement(unittest.TestCase):
         'sessionId': 'BC8DE836-6F48-4F7B-B540-FCEC97C06068', 'status': 0}
     ```
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [GET] {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/getVisibleCells')
     def test_wda_element(self):
         self.app(text='ListView').click()
         ele: wda.Element = self.app(label='LIST_CONTAINER').get(timeout=1)
@@ -84,6 +84,6 @@ class TestFindElement(unittest.TestCase):
      Method: GET 
      Endpoint: {{baseURL}}/session/{{sessionId}}/element/active
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [GET] {{baseURL}}/session/{{sessionId}}/element/active')
     def test_wda_active(self):
         pass

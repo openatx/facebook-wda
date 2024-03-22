@@ -51,7 +51,7 @@ class TestOrientation(unittest.TestCase):
      Method: GET 
      Endpoint: {{baseURL}}/session/{{sessionId}}/rotation
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [GET] {{baseURL}}/session/{{sessionId}}/rotation')
     def test_get_rotation(self):
         pass
 
@@ -60,7 +60,7 @@ class TestOrientation(unittest.TestCase):
      Method: POST 
      Endpoint: {{baseURL}}/session/{{sessionId}}/rotation
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [POST] {{baseURL}}/session/{{sessionId}}/rotation')
     def test_set_rotation(self):
         pass
 
