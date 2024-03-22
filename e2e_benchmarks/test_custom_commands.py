@@ -28,7 +28,7 @@ class TestDevice(unittest.TestCase):
     Method: POST 
     Endpoint: {{baseURL}}/session/{{sessionId}}/timeouts
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [POST] {{baseURL}}/session/{{sessionId}}/timeouts')
     def timeouts(self):
         ...
 
@@ -124,7 +124,7 @@ class TestDevice(unittest.TestCase):
     < 
     * Closing connection 0
     '''
-    @pytest.mark.skip('WDA API NOT USEFUL')
+    @pytest.mark.skip('WDA API NOT USEFUL: {{baseURL}}/session/{{sessionId}}/wda/getPasteboard')
     def test_get_paste_board(self):
         ...
 

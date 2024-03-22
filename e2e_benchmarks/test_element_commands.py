@@ -165,7 +165,7 @@ class TestElement(unittest.TestCase):
      Endpoint: {{baseURL}}/session/{{sessionId}}/screenshot/{{uuid}}
      Description: screenshot for target element.
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [POST] {{baseURL}}/session/{{sessionId}}/screenshot/{{uuid}}')
     def test_screenshot_element(self):
         pass
 
@@ -209,7 +209,7 @@ class TestElement(unittest.TestCase):
     }
     ```
     '''
-    @pytest.mark.skip('WDA API NOT USEFUL')
+    @pytest.mark.skip('WDA API NOT USEFUL: Not use in SwiftUI.')
     def test_ele_accessibilityContainer_is_true(self):
         self.assertFalse(self.app(id='Combined Items').accessibility_container)
 
@@ -231,7 +231,7 @@ class TestElement(unittest.TestCase):
     Method: POST 
     Endpoint: {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/pinch
     '''
-    @pytest.mark.skip('TODO')
+    @pytest.mark.skip('NOT IMPLEMENTED: [POST] {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/pinch')
     def test_pinch(self):
         ...
 
@@ -253,7 +253,7 @@ class TestElement(unittest.TestCase):
      Method: POST 
      Endpoint: {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/dragfromtoforduration
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [POST] {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/dragfromtoforduration')
     def test_drag_from_to_for_duration(self):
       pass
 
@@ -277,7 +277,7 @@ class TestElement(unittest.TestCase):
      Method: POST 
      Endpoint: {{baseURL}}/session/{{sessionId}}/wda/pickerwheel/{{uuid}}/select
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [POST] {{baseURL}}/session/{{sessionId}}/wda/pickerwheel/{{uuid}}/select')
     def test_ele_select(self):
         pass
 
@@ -296,7 +296,7 @@ class TestElement(unittest.TestCase):
      Method: POST 
      Endpoint: {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/forceTouch
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED')
+    @pytest.mark.skip('NOT IMPLEMENTED: [POST] {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/forceTouch')
     def test_ele_force_touch(self):
         pass
 
