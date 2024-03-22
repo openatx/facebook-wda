@@ -12,7 +12,6 @@ from .constant import *
 curPath = os.path.abspath(os.path.dirname(__file__))
 
 
-
 class TestAlert(unittest.TestCase):
 
     def setUp(self):
@@ -45,9 +44,9 @@ class TestAlert(unittest.TestCase):
     Method: POST
     Endpoint: {{baseURL}}/session/{{sessionId}}/alert/text
     '''
-    # @pytest.mark.skip('NOT IMPLEMENTED')
-    # def test_alert_text_input(self):
-    #    pass
+    @pytest.mark.skip('NOT IMPLEMENTED')
+    def test_alert_text_input(self):
+       pass
 
 
     '''

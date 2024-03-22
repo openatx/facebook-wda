@@ -91,10 +91,23 @@ struct ContentView: View {
     @State private var inputText: String = ""
     @State private var longTapShowAlert = false
     @State private var DoubleTapShowAlert = false
+    @State private var orientation: UIDeviceOrientation = UIDevice.current.orientation
 
 
     let acceptOrRejectAlertID = "ACCEPT_OR_REJECT_ALERT"
     let inputAlertID = "INPUT_ALERT"
+    
+    
+    var orientationText: String {
+        switch orientation {
+        case .landscapeLeft, .landscapeRight:
+            return "LANDSCAPE"
+        case .portrait, .portraitUpsideDown:
+            return "PORTRAIT"
+        default:
+            return "UNKNOW"
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -224,6 +237,21 @@ struct ContentView: View {
                     }
                     
                     
+                }
+                
+                // Return Origatation Text
+                Text(orientationText)
+                .accessibilityIdentifier("ORIGATATION_TEXT")
+                .onAppear {
+                    // Listener
+                    NotificationCenter.default.addObserver(
+                        forName: UIDevice.orientationDidChangeNotification,
+                        object: nil,
+                        queue: .main
+                    ) { _ in
+                        // Update
+                        orientation = UIDevice.current.orientation
+                    }
                 }
                 
                 

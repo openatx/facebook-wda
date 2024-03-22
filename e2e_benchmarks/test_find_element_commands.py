@@ -67,9 +67,11 @@ class TestFindElement(unittest.TestCase):
      Endpoint: {{baseURL}}/session/{{sessionId}}/wda/element/{{uuid}}/getVisibleCells
     
     Return Example:
-    {'value': [{'ELEMENT': '31000000-0000-0000-996B-000000000000', 
-    'element-6066-11e4-a52e-4f735466cecf': '31000000-0000-0000-996B-000000000000'}], 
-    'sessionId': 'BC8DE836-6F48-4F7B-B540-FCEC97C06068', 'status': 0}
+    ```
+        {'value': [{'ELEMENT': '31000000-0000-0000-996B-000000000000', 
+        'element-6066-11e4-a52e-4f735466cecf': '31000000-0000-0000-996B-000000000000'}], 
+        'sessionId': 'BC8DE836-6F48-4F7B-B540-FCEC97C06068', 'status': 0}
+    ```
     '''
     @pytest.mark.skip('NOT IMPLEMENTED')
     def test_wda_element(self):
