@@ -661,6 +661,11 @@ $ ideviceinstaller -l
 ## Tests
 测试的用例放在`tests/`目录下，使用iphone SE作为测试机型，系统语言应用。调度框架`pytest`
 
+## WDA Benchmark E2E Tests
+[E2E Tests](e2e_benchmarks)
+Latest WDA Version Testing Report:
+- [WDA Version 7.7.1](e2e_benchmarks/reports/WDA_V711.md)
+
 ## Reference
 Source code
 
