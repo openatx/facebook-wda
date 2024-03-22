@@ -24,71 +24,71 @@ class TestDevice(unittest.TestCase):
         self.wda_client.close()
 
     
-    # '''
-    # Method: POST 
-    # Endpoint: {{baseURL}}/session/{{sessionId}}/timeouts
-    # '''
+    '''
+    Method: POST 
+    Endpoint: {{baseURL}}/session/{{sessionId}}/timeouts
+    '''
     @pytest.mark.skip('NOT IMPLEMENTED')
     def timeouts(self):
         ...
 
-    # '''
-    # Method: POST
-    # Endpoint: {{baseURL}}/session/{{sessionId}}/wda/deactivateApp
-    # Description: Put app into background and than put it back.
-    # '''
+    '''
+    Method: POST
+    Endpoint: {{baseURL}}/session/{{sessionId}}/wda/deactivateApp
+    Description: Put app into background and than put it back.
+    '''
     def test_deactivate_app(self):
         self.app.deactivate(duration=1)
 
 
-    # '''
-    # Method: POST
-    # Endpoint: {{baseURL}}/session/{{sessionId}}/wda/keyboard/dismiss
-    # Description: Put the keyboard into the background.
-    # '''
+    '''
+    Method: POST
+    Endpoint: {{baseURL}}/session/{{sessionId}}/wda/keyboard/dismiss
+    Description: Put the keyboard into the background.
+    '''
     def test_keybord_dismiss(self):
         with pytest.raises(RuntimeError) as e:
             self.app.keyboard_dismiss()
     
     
-    # '''
-    # Method: POST
-    # Endpoint: {{baseURL}}/wda/lock
-    # Endpoint: {{baseURL}}/wda/unlock
-    # Description: Lock the device.
-    # '''
+    '''
+    Method: POST
+    Endpoint: {{baseURL}}/wda/lock
+    Endpoint: {{baseURL}}/wda/unlock
+    Description: Lock the device.
+    '''
     def test_keybord_lock_and_unlock(self):
         self.app.lock()
         self.app.unlock()
 
 
-    # '''
-    # Method: GET
-    # Endpoint: {{baseURL}}/session/{{sessionId}}/wda/screen
-    # Description: UIKit scale factor
-    # Refs:
-    #     https://developer.apple.com/library/archive/documentation/DeviceInformation/Reference/iOSDeviceCompatibility/Displays/Displays.html
-    # There is another way to get scale
-    #     self._session_http.get("/wda/screen").value returns {"statusBarSize": {'width': 320, 'height': 20}, 'scale': 2}
-    # '''
+    '''
+    Method: GET
+    Endpoint: {{baseURL}}/session/{{sessionId}}/wda/screen
+    Description: UIKit scale factor
+    Refs:
+        https://developer.apple.com/library/archive/documentation/DeviceInformation/Reference/iOSDeviceCompatibility/Displays/Displays.html
+    There is another way to get scale
+        self._session_http.get("/wda/screen").value returns {"statusBarSize": {'width': 320, 'height': 20}, 'scale': 2}
+    '''
     def test_scale(self):
         self.assertIsInstance(self.app.scale, int)
         
     
-    # '''
-    # Method: GET
-    # Endpoint: {{baseURL}}/wda/activeAppInfo
-    # Description: Return bundleId pid and etc. like:
-    # {'processArguments': {'env': {}, 'args': []}, 'name': '', 'pid': 19052, 'bundleId': 'com.test.cert.TestCert'}
-    # '''
-    # def test_active_app_info(self):
-    #     except_json_schema = {"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":
-    #                           {"processArguments":{"type":"object","properties":{"env":{"type":"object",
-    #                             "additionalProperties":False},"args":{"type":"array"}},"additionalProperties":False,
-    #                             "required":["env","args"]},"name":{"type":"string"},"pid":{"type":"integer"},
-    #                             "bundleId":{"type":"string"}},"additionalProperties":False,"required":
-    #                             ["processArguments","name","pid","bundleId"]}
-    #     self.assertTrue(jsonschema.Draft7Validator(except_json_schema).is_valid(self.app.app_current()))
+    '''
+    Method: GET
+    Endpoint: {{baseURL}}/wda/activeAppInfo
+    Description: Return bundleId pid and etc. like:
+    {'processArguments': {'env': {}, 'args': []}, 'name': '', 'pid': 19052, 'bundleId': 'com.test.cert.TestCert'}
+    '''
+    def test_active_app_info(self):
+        except_json_schema = {"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":
+                              {"processArguments":{"type":"object","properties":{"env":{"type":"object",
+                                "additionalProperties":False},"args":{"type":"array"}},"additionalProperties":False,
+                                "required":["env","args"]},"name":{"type":"string"},"pid":{"type":"integer"},
+                                "bundleId":{"type":"string"}},"additionalProperties":False,"required":
+                                ["processArguments","name","pid","bundleId"]}
+        self.assertTrue(jsonschema.Draft7Validator(except_json_schema).is_valid(self.app.app_current()))
 
 
     '''

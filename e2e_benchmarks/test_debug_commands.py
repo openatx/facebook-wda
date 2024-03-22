@@ -8,6 +8,7 @@ import pytest
 import unittest
 import jsonschema
 import wda
+from lxml import etree
 from .constant import *
 
 curPath = os.path.abspath(os.path.dirname(__file__))
@@ -25,10 +26,26 @@ class TestDebug(unittest.TestCase):
         self.wda_client.close()
 
     
-    # '''
-    # Method: GET 
-    # Endpoint: {{baseURL}}/source
-    # Description: Fetch the source tree (DOM) of the current page.
-    # '''
+    '''
+    Method: GET 
+    Endpoint: {{baseURL}}/source
+    Description: Fetch the source tree (DOM) of the current page.
+    '''
     def test_source(self):
-        print(type(self.app.source()))
+        self.app(text='ListView').click()
+        source_tree_xml_str: str = self.app.source()
+        xml_bytes = source_tree_xml_str.encode('utf-8')
+        self.assertTrue(etree.fromstring(xml_bytes))
+
+
+    '''
+    Method: GET 
+    Endpoint: {{baseURL}}/wda/accessibleSource
+    '''
+    def test_accessible_source(self):
+        self.app(text='ListView').click()
+        source = self.app.source(accessible=True)
+        self.assertIsInstance(source, dict)
+        assert 'name' in source, "'name' field is missing"
+        assert 'type' in source, "'type' field is missing"
+        assert 'children' in source, "'children' field is missing"

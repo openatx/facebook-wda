@@ -658,7 +658,13 @@ class BaseClient(object):
         client.__callbacks = self.__callbacks
         return client
 
-    def close(self):  # close session
+
+    '''
+    TODO: Should the ctx of the client be written back after this code is executed,\
+    as the session ID is already empty when delete session api trigger.
+    '''
+    def close(self):
+        '''Close created session which session id saved in class ctx.'''
         try:
             return self._session_http.delete('/')
         except WDARequestError as e:
