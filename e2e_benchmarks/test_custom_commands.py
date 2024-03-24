@@ -28,9 +28,9 @@ class TestDevice(unittest.TestCase):
     Method: POST 
     Endpoint: {{baseURL}}/session/{{sessionId}}/timeouts
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED: [POST] {{baseURL}}/session/{{sessionId}}/timeouts')
-    def timeouts(self):
-        ...
+    def test_timeouts(self):
+        with pytest.raises(wda.exceptions.WDAError,  match="This method is intentionally not supported by WDA."):
+            self.wda_client.set_timeouts()
 
     '''
     Method: POST
@@ -126,6 +126,7 @@ class TestDevice(unittest.TestCase):
     '''
     @pytest.mark.skip('WDA API NOT USEFUL: {{baseURL}}/session/{{sessionId}}/wda/getPasteboard')
     def test_get_paste_board(self):
+        '''Wait to PR merge: https://github.com/openatx/facebook-wda/pull/133/files'''
         ...
 
 

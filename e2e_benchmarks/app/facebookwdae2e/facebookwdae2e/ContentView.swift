@@ -91,6 +91,8 @@ struct ContentView: View {
     @State private var inputText: String = ""
     @State private var longTapShowAlert = false
     @State private var DoubleTapShowAlert = false
+    @State private var showAlert = false
+    @State private var alertText = ""
     @State private var orientation: UIDeviceOrientation = UIDevice.current.orientation
 
 
@@ -123,6 +125,8 @@ struct ContentView: View {
                         .accessibilityLabel(inputAlertID)
                         .accessibilityIdentifier(inputAlertID)
                         .padding()
+                    
+                
                 }
                 
                 // 新的并排按钮
@@ -292,5 +296,68 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+    }
+}
+
+
+// SwiftUI 没有内置的带文本输入的弹出对话框，所以我们需要自定义一个
+extension View {
+    func textFieldAlert(isPresented: Binding<Bool>, text: Binding<String>) -> some View {
+        TextFieldAlert(isPresented: isPresented, text: text, presentingView: self)
+    }
+}
+
+struct TextFieldAlert<PresentingView: View>: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    @Binding var text: String
+    let presentingView: PresentingView
+    
+    func makeUIViewController(context: Context) -> UIViewController {
+        UIViewController()
+    }
+    
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        guard context.coordinator.alert == nil else { return }
+        
+        if isPresented {
+            let alert = UIAlertController(title: "Alert", message: "Type something:", preferredStyle: .alert)
+            alert.addTextField { textField in
+                textField.placeholder = "Enter text here"
+                textField.text = text
+            }
+            
+            alert.addAction(UIAlertAction(title: "Submit", style: .default) { _ in
+                if let textField = alert.textFields?.first, let text = textField.text {
+                    self.text = text
+                    isPresented = false
+                }
+            })
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+                isPresented = false
+            })
+            
+            context.coordinator.alert = alert
+            
+            DispatchQueue.main.async { // Must be presented in the main thread
+                uiViewController.present(alert, animated: true, completion: {
+                    self.isPresented = false
+                    context.coordinator.alert = nil
+                })
+            }
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator {
+        var alert: UIAlertController?
+        var textFieldAlert: TextFieldAlert
+        
+        init(_ textFieldAlert: TextFieldAlert) {
+            self.textFieldAlert = textFieldAlert
+        }
     }
 }

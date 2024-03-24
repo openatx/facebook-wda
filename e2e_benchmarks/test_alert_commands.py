@@ -44,12 +44,13 @@ class TestAlert(unittest.TestCase):
     Method: POST
     Endpoint: {{baseURL}}/session/{{sessionId}}/alert/text
     '''
-    @pytest.mark.skip('NOT IMPLEMENTED: [POST] {{baseURL}}/session/{{sessionId}}/alert/text')
     def test_alert_text_input(self):
-       pass
+        with pytest.raises(wda.exceptions.WDARequestError,  match="status=110, value={'error': \'no such alert', "\
+                           "'message': 'An attempt was made to operate on a modal dialog when one was not open'}"):
+            self.wda_client.alert.set_text('hello world')
 
 
-    '''
+    '''1
     Method: GET 
     Endpoint: {{baseURL}}/session/{{sessionId}}/wda/alert/buttons
     Description: Get buttons for all prompt alert buttons.
