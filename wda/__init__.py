@@ -483,6 +483,20 @@ class BaseClient(object):
             functools.partial(self._fetch, "POST", with_session=True),
             functools.partial(self._fetch, "DELETE", with_session=True))  # yapf: disable
 
+    def set_timeouts(self):
+        '''Set server timeouts
+        WDA Server Not Support:
+            ```
+            + (id<FBResponsePayload>)handleTimeouts:(FBRouteRequest *)request
+            {
+            // This method is intentionally not supported.
+            return FBResponseWithOK();
+            }
+            ```
+        '''
+        raise WDAError('This method is intentionally not supported by WDA.')
+
+
     def home(self):
         """Press home button"""
         try:
@@ -1171,6 +1185,16 @@ class Alert(object):
     @property
     def text(self):
         return self.http.get('/alert/text').value
+    
+    def set_text(self, text: str):
+        '''Set text to alert.
+        Except return example:
+            ```
+            wda.exceptions.WDARequestError: WDARequestError(status=110, 
+            value={'error': 'no such alert', 'message': 'An attempt was 
+            made to operate on a modal dialog when one was not open'})```
+        '''
+        return self.http.post('/alert/text', data={'value': text})
 
     def wait(self, timeout=20.0):
         start_time = time.time()
