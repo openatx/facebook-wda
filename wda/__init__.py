@@ -900,6 +900,8 @@ class BaseClient(object):
             return self._session_http.post("/mds/touchAndHold",
                                            dict(x=x, y=y, duration=0.02))
 
+        # Support WDA `BREAKING CHANGES`
+        # More see: https://github.com/appium/WebDriverAgent/blob/master/CHANGELOG.md#600-2024-01-31
         try:
             return self._session_http.post('/wda/tap', dict(x=x, y=y))
         except:
