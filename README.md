@@ -664,7 +664,8 @@ $ ideviceinstaller -l
 ## WDA Benchmark E2E Tests
 [E2E Tests](e2e_benchmarks)
 Latest WDA Version Testing Report:
-- [WDA Version 7.7.1](e2e_benchmarks/reports/WDA_V711.md)
+- [WDA Version 7.1.1](e2e_benchmarks/reports/WDA_V711.md)
+- [WDA Version 6.1.1](e2e_benchmarks/reports/WDA_V611.md)
 
 ## Reference
 Source code
