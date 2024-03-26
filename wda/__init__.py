@@ -483,20 +483,6 @@ class BaseClient(object):
             functools.partial(self._fetch, "POST", with_session=True),
             functools.partial(self._fetch, "DELETE", with_session=True))  # yapf: disable
 
-    def set_timeouts(self):
-        '''Set server timeouts
-        WDA Server Not Support:
-            ```
-            + (id<FBResponsePayload>)handleTimeouts:(FBRouteRequest *)request
-            {
-            // This method is intentionally not supported.
-            return FBResponseWithOK();
-            }
-            ```
-        '''
-        raise WDAError('This method is intentionally not supported by WDA.')
-
-
     def home(self):
         """Press home button"""
         try:
@@ -913,16 +899,11 @@ class BaseClient(object):
                 "TMQ_ORIGIN") == "civita":  # in TMQ and belong to MDS
             return self._session_http.post("/mds/touchAndHold",
                                            dict(x=x, y=y, duration=0.02))
-        '''
-        TODO WDA releases incompatible upgrades, we are handled through exception capture. 
-        Subsequently, different logic will be executed based on the WDA version judgment.
-        Before: /tap/0
-        After: /tap
-        '''
+
         try:
-            return self._session_http.post('/tap/0', dict(x=x, y=y))
-        except:
             return self._session_http.post('/wda/tap', dict(x=x, y=y))
+        except:
+            return self._session_http.post('/wda/tap/0', dict(x=x, y=y))
 
     def _percent2pos(self, x, y, window_size=None):
         if any(isinstance(v, float) for v in [x, y]):
