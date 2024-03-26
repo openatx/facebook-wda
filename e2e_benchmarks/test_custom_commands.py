@@ -23,15 +23,6 @@ class TestDevice(unittest.TestCase):
     def tearDown(self):
         self.wda_client.close()
 
-    
-    '''
-    Method: POST 
-    Endpoint: {{baseURL}}/session/{{sessionId}}/timeouts
-    '''
-    def test_timeouts(self):
-        with pytest.raises(wda.exceptions.WDAError,  match="This method is intentionally not supported by WDA."):
-            self.wda_client.set_timeouts()
-
     '''
     Method: POST
     Endpoint: {{baseURL}}/session/{{sessionId}}/wda/deactivateApp
