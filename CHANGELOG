@@ -1,5 +1,595 @@
 CHANGES
 =======
 
+1.4.7
+-----
+
+* Update release.yml
+* update github release (#146)
+* fix: fix PR comment
+* fix: fix PR comment
+* fix: remove ds store file
+* doc: add report link to readme
+* feat: support tap api older version and add 611version test report
+* feat: add some unsupport func
+* feat: add some unsupport func
+* doc: add v771 e2e test report
+* doc: add v771 e2e test report
+* feat: add all e2e benchmarks
+* feat: add find element e2e testing
+* feat: add find element e2e testing
+* feat: add benchmark e2e testing (element and before etc.)
+
+1.4.6
+-----
+
+* add github workflow
+
+1.4.5
+-----
+
+* set trust\_env to False
+
+1.4.4
+-----
+
+* set no\_proxy since some pc socket.gethostbyname is very slow
+* callback example fix
+
+1.4.3
+-----
+
+* add cahced\_property to alibaba
+
+1.4.2
+-----
+
+* hotfix for screenshot().save(s.jpg) error
+
+1.4.1
+-----
+
+* fix #102
+
+1.4.0
+-----
+
+* add new api for press\_duration
+* use self write AttrDict class to replace attrdict lib
+* update readme
+
+1.3.4
+-----
+
+* remove noisy log
+
+1.3.3
+-----
+
+* support tidevice
+
+1.3.2
+-----
+
+* limit debug log length
+
+1.3.1
+-----
+
+* add more debug info
+
+1.3.0
+-----
+
+* change wait() default return None when element not found, previous raise Error
+
+1.2.7
+-----
+
+* fix again
+
+1.2.6
+-----
+
+* fix loop call
+
+1.2.5
+-----
+
+* wait wda ready before tins xctest
+
+1.2.4
+-----
+
+* update get scale logic
+
+1.2.3
+-----
+
+* add try\_first in register\_callback, optimize usage of USBClient
+* python2 is no logger support, remove from traivs.yml
+
+1.2.2
+-----
+
+* add python 3.7 and 3.8 to travis.yml
+* retry for stale element error
+* add d.alert.click\_exists
+
+1.2.1
+-----
+
+* Add en button name for alert monitor
+* add timeout in http request
+
+1.2.0
+-----
+
+* fix first call windows\_size has to start com.apple.Preferences bug, add wda\_bundle\_id argument
+
+1.1.10
+------
+
+* fix nameMatches, update tests
+* fix info get error
+* fix window size request twice error
+
+1.1.9
+-----
+
+* merge WDAUnknownError
+* support handle possibly crashed error
+
+1.1.8
+-----
+
+* add retry to app\_current
+
+1.1.7
+-----
+
+* add depth to 4
+* support tins when wda is not ready
+
+1.1.6
+-----
+
+* add \_fast\_swipe
+* add 无线局域网与蜂窝网络 to watch\_and\_click
+
+1.1.5
+-----
+
+* hotfix window\_size return (0,0) error
+
+1.1.4
+-----
+
+* fix wait\_device and fix-session-id both occur error
+* add open watch button
+
+1.1.3
+-----
+
+* change http timeout to 180s and wait device to 180s
+* add watch\_and\_click usage
+* hotfix for inside platform
+
+1.1.2
+-----
+
+* fix spell
+* fix check isatty bug
+
+1.1.1
+-----
+
+* only tmq and not local device use /mds/touchAndHold
+
+1.1.0
+-----
+
+* add d.alert.watch\_and\_click support
+* add watch and click support
+
+1.0.12
+------
+
+* change touch to mds touch for test
+
+1.0.11
+------
+
+* wait for wda recover when 502 bad gateway
+
+1.0.10
+------
+
+* add Selector.click
+
+1.0.9
+-----
+
+* change wait\_debug timeout from 30s to 120s, add element.info
+
+1.0.8
+-----
+
+* hot fix, i do not know why
+
+1.0.7
+-----
+
+* change tmq check time
+
+1.0.6
+-----
+
+* add appium\_settings, fix invalid\_session\_id not handle old wda
+* slow find elements
+
+1.0.5
+-----
+
+* fix missing delete bug
+
+1.0.4
+-----
+
+* fix selector getattr recursive error
+
+1.0.3
+-----
+
+* show error message
+
+1.0.2
+-----
+
+* add alert check before send\_keys, for tmq platform
+
+1.0.1
+-----
+
+* fix element operation error
+
+1.0.0
+-----
+
+* finish register\_callback
+* update doc
+* add callback
+
+0.9.7
+-----
+
+* update session-id when session-id matched application crashed. for old wda
+
+0.9.6
+-----
+
+* simplefy error\_callback logic, fix infinite callback error
+* remove useless api
+* fix ipython complete, add more tests
+
+0.9.5
+-----
+
+* bug fix
+
+0.9.4
+-----
+
+* reduce /status request count
+
+0.9.3
+-----
+
+* change el.click logic to get position first and send tap request
+
+0.9.2
+-----
+
+* fix compability with old WDA session
+
+0.9.1
+-----
+
+* fix bug when device re-plug
+
+0.9.0
+-----
+
+* fix urljoin in python 3.7
+* add class USBClient, which support usb connection without iproxy
+
+0.8.1
+-----
+
+* fix since attrdict doc not readed
+* fix get sessionId
+
+0.8.0
+-----
+
+* add press method, support args: home, volumeUp, volumeDown
+
+0.7.7
+-----
+
+* compatible with old WDA
+
+0.7.6
+-----
+
+* merge master
+* fix conflict
+* fix c.windows\_size() when session not created
+* add golang wda client link
+* update readme
+
+0.7.5
+-----
+
+* fix alert callback missing error
+
+0.7.4
+-----
+
+* fix compatibility for old version of wda
+
+0.7.3
+-----
+
+* when error:invalid-session-id occurs, retry again
+
+0.7.2
+-----
+
+* raise error when return value contains error key
+
+0.7.1
+-----
+
+* fix session() with no argument error
+
+0.7.0
+-----
+
+* update doc
+* move all Session methods to Client
+
+0.6.2
+-----
+
+* rename wda\_alibaba to wda\_taobao
+
+0.6.1
+-----
+
+* add taobao property
+
+0.6.0
+-----
+
+* add alibaba property
+
+0.5.0
+-----
+
+* add home function to Session
+* add app\_list, even useless
+
+0.4.2
+-----
+
+* fix swipe\_up-down-left-right, close #89
+
+0.4.1
+-----
+
+* fix python2 support, close #76
+* update doc
+
+0.4.0
+-----
+
+* update readme
+* add more functions
+* add method s.xpath(...)
+* make httpdo thread safe
+
+0.3.9
+-----
+
+* fix app launch stuck, set Quiescence to False
+
+0.3.8
+-----
+
+* check url format when create Client
+
+0.3.7
+-----
+
+* fix compatible for the latest modified WDA by appium
+
+0.3.6
+-----
+
+* fix WDARequestError, format code with yapf
+
+0.3.5
+-----
+
+* add pillow depencency
+
+0.3.4
+-----
+
+* fix: #65
+
+0.3.3
+-----
+
+* fix all the tests
+
+0.3.2
+-----
+
+* compatiable with py2
+
+0.3.1
+-----
+
+* add retry for status, since status sometime get EmptyReponse
+
+0.3.0
+-----
+
+* make session launch more robust
+* change json.decoder.JSONDecodeError to WDARequestError
+
+0.2.4
+-----
+
+* fix session, can not launch error
+
+0.2.3
+-----
+
+* add content-type application/json when send http post
+* recommend using appium/WebDriverAgent
+* fix set\_callback check error
+
+0.2.2
+-----
+
+* fix travis
+* try catch response.json()
+* add wait\_ready function
+* add screenshot in session, add click(support percent), add scale, update readme
+* [issue #33]Add escape character for quotes
+
+0.2.1
+-----
+
+* fix in py3.6 error
+* fix name matches, use string escape fix it
+* add test example
+* fix nameMatches
+* add netease cloudmusic test example
+
+0.2.0
+-----
+
+* finish first version of sync new code
+* fix some tests
+* add nameMatches
+* sync to lastest wda
+* sync to new wda code
+* Allow extra capabilities to be passed to the session (#25)
+* [Screenshot] Open file in binary mode
+
+0.1.2
+-----
+
+* freeze webdriveragent version
+* change example tab to 4space
+* support handle alert automaticly
+* Sessions with arguments (#23)
+* change class\_name to className and text\_contains to textContains
+
+0.1.1
+-----
+
+* Lukzeg change orientation functionality (#21)
+* add Element change lot of code
+* add some beta apis
+* follow format
+* Change time\_out to timeout and add example usage in readme
+* add alert.wait and Selector partial text
+* support get current session id and bundle id
+
+0.1.0
+-----
+
+* add pinch api
+* update doc
+* update accessible,pinch,keyboardDismiss,doubleTap,deactivateApp
+* close #15
+* update api sync with WDA (#12)
+* add healthcheck api
+* fix broken swipe() API, due to wda specific endpoint complied with WD spec naming convention https://github.com/facebook/WebDriverAgent/commit/eeaa1a3bbc9559d41ff3779c73c6678c7715a3d0
+* fix unicode convert to unicode error
+* fix missing e args
+* support python3
+
+0.0.3
+-----
+
+* retry request when first failed
+* Update \_\_init\_\_.py
+* Update \_\_init\_\_.py
+* update README.md file, adding example for element swipe api
+* Add swipe support for wda element
+* add comment and fix some code structure according to the pr
+* expand ‘link text’ query of Selector class with ‘value’ or ‘label’ property, in case no ‘name’ property exists and only ‘value’ property valid
+* fix the right api
+* add send\_keys, but it not works actually
+* sync to the latest wda
+* status func add sessionId
+* just add some comment
+* add alert support, close #6
+
+0.0.2
+-----
+
+* raise exceptions when connect went wrong
+* add more about it
+* add more ..
+* change rect to bounds, add DEBUG mode
+* remove extra code
+* finish scroll part
+* add scroll function
+* limit max find element time into 90s
+* merge code
+* add bounds
+* Add attribute
+* Add getAttribut()
+* Update \_\_init\_\_.py
+* Fix find element when element's isvisible=NO
+* add tap\_hold api
+* enable swipe function
+* Fix xpath定位
+* Add xpath 定位
+* Update README.md
+* Update README.md
+* Update README.md
+* Update README.md
+* Update README.md
+* fix documentation, add some props
+* do some fix
+* update desc
+
+0.0.1
+-----
+
+* wow, update again, this is the last today
+* update document
+* add the rest api
+* fix json
+* make doc looks beautiful
+* add with operation
+* fix travis setting
+* update password
+* add travis badge
+* add travis
+* add screenshot and selector
+* add selector
+* add tap and session close
+* add session, and home function, wrap python requests functions
+* update but not implement except status
+* initial first release
 * init project
 * Initial commit

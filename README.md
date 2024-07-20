@@ -529,7 +529,7 @@ c = wda.Client()
 
 # 使用Example
 def device_offline_callback(client, err):
-	if isinstance(err, (requests.ConnectionError, wda.WDABadGateway, requests.ReadTimeout)):
+	if isinstance(err, wda.WDABadGateway):
 		print("Handle device offline")
 		ok = client.wait_ready(60) # 等待60s恢复
 		if not ok:

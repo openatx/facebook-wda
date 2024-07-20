@@ -5,7 +5,6 @@ from __future__ import print_function, unicode_literals
 
 import base64
 import contextlib
-import copy
 import enum
 import functools
 import io
@@ -21,16 +20,17 @@ from collections import defaultdict, namedtuple
 from typing import Callable, Optional, Union
 from urllib.parse import urlparse
 
-import requests
 import retry
 import six
 from deprecated import deprecated
 
-from . import requests_usbmux, xcui_element_types
-from ._proto import *
-from .exceptions import *
-from .usbmux import Usbmux
-from .utils import inject_call, limit_call_depth
+from wda import xcui_element_types
+from wda._proto import *
+from wda.exceptions import *
+from wda.usbmux import fetch
+from wda.usbmux.pyusbmux import list_devices, select_device
+from wda.utils import inject_call, limit_call_depth, AttrDict, convert
+
 
 try:
     from functools import cached_property  # Python3.8+
@@ -74,20 +74,6 @@ class Callback(str, enum.Enum):
     RET_ABORT = "::abort"
     RET_CONTINUE = "::continue"
 
-
-class AttrDict(dict):
-    def __getattr__(self, key):
-        if isinstance(key, str) and key in self:
-            return self[key]
-        raise AttributeError("Attribute key not found", key)
-
-
-def convert(dictionary):
-    """
-    Convert dict to namedtuple
-    """
-    return AttrDict(dictionary)
-
     # Old implement
     # return namedtuple('GenericDict', list(dictionary.keys()))(**dictionary)
 
@@ -130,16 +116,7 @@ def httpdo(url, method="GET", data=None, timeout=None) -> AttrDict:
         return _unsafe_httpdo(url, method, data, timeout)
 
 
-@functools.lru_cache(1024)
-def _requests_session_pool_get(scheme, netloc):
-    return requests_usbmux.Session()
-
-
-def _is_tmq_platform() -> bool:
-    return os.getenv("TMQ") == "true"
-
-
-def _unsafe_httpdo(url, method='GET', data=None, timeout=None):
+def _unsafe_httpdo(url: str, method='GET', data=None, timeout=None):
     """
     Do HTTP Request
     """
@@ -151,16 +128,7 @@ def _unsafe_httpdo(url, method='GET', data=None, timeout=None):
 
     if timeout is None:
         timeout = HTTP_TIMEOUT
-    try:
-        u = urlparse(url)
-        request_session = _requests_session_pool_get(u.scheme, u.netloc)
-        response = request_session.request(method,
-                                           url,
-                                           json=data,
-                                           timeout=timeout)
-    except (requests.ConnectionError, requests.ReadTimeout) as e:
-        raise
-
+    response = fetch(url, method, data, timeout)
     if response.status_code == 502:  # Bad Gateway
         raise WDABadGateway(response.status_code, response.text)
 
@@ -190,8 +158,6 @@ def _unsafe_httpdo(url, method='GET', data=None, timeout=None):
         if response.text == "":
             raise WDAEmptyResponseError(method, url, data)
         raise WDAError(method, url, response.text[:100] + "...") # should not too long
-    except requests.ConnectionError as e:
-        raise WDAError("Failed to establish connection to to WDA")
 
 
 class Rect(list):
@@ -297,43 +263,9 @@ class BaseClient(object):
             return Callback.RET_RETRY
         """ 等待设备恢复上线 """
 
-    def _callback_wait_ready(self, err):
-        # logger.warning("Error: %s", err) # too noisy
-        if isinstance(err, (ConnectionError, requests.ConnectionError,
-                            requests.ReadTimeout, WDABadGateway)):
-            if not self.wait_ready(DEVICE_WAIT_TIMEOUT):  # 等待设备恢复在线
-                return Callback.RET_ABORT
-            return Callback.RET_RETRY
-
-    def _callback_tmq_before_send_keys(self, urlpath: str):
-        if urlpath.endswith("/wda/keys"):
-            if self.alert.exists:
-                self.alert.accept()
-            print("send_keys callback called")
-
-    def _callback_tmq_print_error(self, method, url, data, err):
-        if 'no such alert' in str(err):  # too many this error
-            return
-
-        logger.warning(
-            "HTTP Error happens, this message is printed for better debugging")
-        body = json.dumps(data) if data else ''
-        logger.warning("Shell$ curl -X {method} -d '{body}' '{url}'".format(
-            method=method.upper(), body=body or '', url=url))
-        logger.warning("Error: %s", err)
-
     def _init_callback(self):
         self.register_callback(Callback.ERROR,
                                self._callback_fix_invalid_session_id)
-        if _is_tmq_platform():
-            # 输入之前处理弹窗
-            # 出现错误是print出来，方便调试
-            logger.info("register callbacks for tmq")
-            self.register_callback(Callback.ERROR, self._callback_wait_ready)
-            self.register_callback(Callback.HTTP_REQUEST_BEFORE,
-                                   self._callback_tmq_before_send_keys)
-            self.register_callback(Callback.ERROR,
-                                   self._callback_tmq_print_error)
 
     def _callback_json_report(self, method, urlpath):
         """ TODO: ssx """
@@ -895,11 +827,6 @@ class BaseClient(object):
                                        dict(duration=duration))
 
     def tap(self, x, y):
-        if _is_tmq_platform() and os.environ.get(
-                "TMQ_ORIGIN") == "civita":  # in TMQ and belong to MDS
-            return self._session_http.post("/mds/touchAndHold",
-                                           dict(x=x, y=y, duration=0.02))
-
         # Support WDA `BREAKING CHANGES`
         # More see: https://github.com/appium/WebDriverAgent/blob/master/CHANGELOG.md#600-2024-01-31
         try:
@@ -1822,15 +1749,14 @@ class USBClient(Client):
 
     def __init__(self, udid: str = "", port: int = 8100, wda_bundle_id=None):
         if not udid:
-            usbmux = Usbmux()
-            infos = usbmux.device_list()
+            infos = [info for info in list_devices() if info.connection_type == 'USB']
             if len(infos) == 0:
                 raise RuntimeError("no device connected")
             elif len(infos) >= 2:
                 raise RuntimeError("more then one device connected")
-            udid = infos[0]['SerialNumber']
+            udid = infos[0].serial
 
-        super().__init__(url=requests_usbmux.DEFAULT_SCHEME + "{}:{}".format(udid, port))
+        super().__init__(url=f"http+usbmux://{udid}:{port}")
         if self.is_ready():
             return
 

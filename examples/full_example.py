@@ -3,10 +3,7 @@
 # 网易云音乐测试示例
 #
 
-import os
-import time
 import wda
-import requests
 from logzero import logger
 
 

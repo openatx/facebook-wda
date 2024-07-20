@@ -54,15 +54,15 @@ def limit_call_depth(n: int):
     return wrapper
 
 
-def main():
-    @limit_call_depth(1)
-    def foo(a):
-        print("Foo:", a)
-        if a == 2:
-            return
-        foo(a+1)
+class AttrDict(dict):
+    def __getattr__(self, key):
+        if isinstance(key, str) and key in self:
+            return self[key]
+        raise AttributeError("Attribute key not found", key)
 
-    foo(0)
 
-if __name__ == "__main__":
-    main()
+def convert(dictionary):
+    """
+    Convert dict to namedtuple
+    """
+    return AttrDict(dictionary)
