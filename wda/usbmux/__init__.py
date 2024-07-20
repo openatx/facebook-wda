@@ -50,6 +50,7 @@ def fetch(url: str, method="GET", data=None, timeout=None) -> HTTPResponseWrappe
         HTTPError
     """
     try:
+        method = method.upper()
         conn = http_create(url)
         conn.timeout = timeout
         u = urlparse(url)

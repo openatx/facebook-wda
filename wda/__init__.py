@@ -131,7 +131,6 @@ def _unsafe_httpdo(url: str, method='GET', data=None, timeout=None):
     response = fetch(url, method, data, timeout)
     if response.status_code == 502:  # Bad Gateway
         raise WDABadGateway(response.status_code, response.text)
-
     if DEBUG:
         ms = (time.time() - start) * 1000
         response_text = response.text
@@ -1581,7 +1580,7 @@ class Element(object):
         return self.http.fetch(method, '/wda/element/' + self._id + url, data)
 
     def _prop(self, key):
-        return self._req('get', '/' + key.lstrip('/')).value
+        return self._req('GET', '/' + key.lstrip('/')).value
 
     def _wda_prop(self, key):
         ret = self.http.get('/wda/element/%s/%s' % (self._id, key)).value
@@ -1741,7 +1740,7 @@ class Element(object):
         ''' Element has been selected.
         Returns: bool
         '''
-        return self._req('get', '/selected').value
+        return self._req('GET', '/selected').value
 
 
 class USBClient(Client):
