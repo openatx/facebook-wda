@@ -1,5 +1,7 @@
+# coding: utf-8
+# author: codeskyblue
+
 import json
-from os import stat
 
 
 JSONDecodeError = json.decoder.JSONDecodeError if hasattr(

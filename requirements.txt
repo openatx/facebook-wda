@@ -1,6 +1,6 @@
-requests>=2.9.1
 six
 retry
 Pillow
 cached-property~=1.5.1
 Deprecated~=1.2.6
+construct>=2
