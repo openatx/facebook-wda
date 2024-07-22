@@ -1,0 +1,41 @@
+name: Python application
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+    paths-ignore:
+      - ".gitignore"
+      - "CHANGELOG"
+      - "AUTHORS"
+      - "LICENSE"
+      - "**/*.rst"
+      - "**/*.md"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: [ "3.7", "3.8", "3.9", "3.10", "3.11", "3.12" ]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+      fail-fast: false  # Continue running all matrix jobs even if some fail
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python3 -m pip install .
+          python -m pip install -r tests/requirements.txt
+      - name: Run Tests
+        # All existing tests require an Apple device with WDA app already launched
+        # This at least ensures getting past compilation to python bytecode
+        run: pytest --co tests
