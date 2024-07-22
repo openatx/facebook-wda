@@ -91,3 +91,6 @@ ENV/
 .vscode
 .DS_Store
 xcuserdata/
+
+# IDE
+.idea/

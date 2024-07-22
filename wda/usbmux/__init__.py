@@ -5,12 +5,13 @@
 """
 
 import json
-from http.client import HTTPConnection, HTTPSConnection
+from http.client import HTTPConnection, HTTPSConnection, HTTPResponse
 from urllib.parse import urlparse
 
 from wda.usbmux.exceptions import HTTPError, MuxConnectError, MuxError
 from wda.usbmux.pyusbmux import select_device
 
+_DEFAULT_CHUNK_SIZE = 4096
 
 def http_create(url: str) -> HTTPConnection:
     u = urlparse(url)
@@ -42,7 +43,7 @@ class HTTPResponseWrapper:
         return self.status_code
     
 
-def fetch(url: str, method="GET", data=None, timeout=None) -> HTTPResponseWrapper:
+def fetch(url: str, method="GET", data=None, timeout=None, chunk_size: int = _DEFAULT_CHUNK_SIZE) -> HTTPResponseWrapper:
     """
     thread safe http request
 
@@ -61,10 +62,18 @@ def fetch(url: str, method="GET", data=None, timeout=None) -> HTTPResponseWrappe
         else:
             conn.request(method, urlpath, json.dumps(data), headers={"Content-Type": "application/json"})
         response = conn.getresponse()
-        content = bytearray()
-        while chunk := response.read(4096):
-            content.extend(chunk)
+        content = _read_response(response, chunk_size)
         resp = HTTPResponseWrapper(content, response.status)
         return resp
     except Exception as e:
         raise HTTPError(e)
+
+
+def _read_response(response:HTTPResponse, chunk_size: int = _DEFAULT_CHUNK_SIZE) -> bytearray:
+    content = bytearray()
+    while True:
+        chunk = response.read(chunk_size)
+        if len(chunk) == 0:
+            break
+        content.extend(chunk)
+    return content
