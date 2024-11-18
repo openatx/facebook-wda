@@ -30,6 +30,7 @@ from wda.exceptions import *
 from wda.usbmux import fetch
 from wda.usbmux.pyusbmux import list_devices, select_device
 from wda.utils import inject_call, limit_call_depth, AttrDict, convert
+from wda.w3c_actions import W3CActions
 
 
 try:
@@ -888,6 +889,32 @@ class BaseClient(object):
 
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, duration=duration)
         return self._session_http.post('/wda/dragfromtoforduration', data=data)
+    
+    def swipe_with_velocity(self, x1: Union[int, float], y1: Union[int, float], x2: Union[int, float], y2: Union[int, float],
+                            press_duration: float, hold_duration: float, velocity: float):
+        """
+        Press down and drag with velocity, appium forked version of wda only
+
+        Args:
+            - x1, y1, x2, y2 (Union[int, float]): The start and end coordinates if all value is of `int` type, otherwise the start
+                and end percentage of screen axis
+            - press_duration (float): the duration before swiping
+            - hold_duration (float): the duration after swiping
+            - velocity (float): the velocity of swiping
+        
+        [[FBRoute POST:@"/wda/pressAndDragWithVelocity"] respondWithTarget:self action:@selector(handlePressAndDragCoordinateWithVelocity:)]
+        """
+        if any(isinstance(v, float) for v in [x1, y1, x2, y2]):
+            size = self.window_size()
+            x1, y1 = self._percent2pos(x1, y1, size)
+            x2, y2 = self._percent2pos(x2, y2, size)
+        
+        data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, pressDuration=press_duration, velocity=velocity, holdDuration=hold_duration)
+        return self._session_http.post('/wda/pressAndDragWithVelocity', data=data)
+    
+    def performW3CTouchActions(self, actions: W3CActions):
+        data = dict(actions=actions.data)
+        return self._session_http.post('/actions', data=data)
 
     def _fast_swipe(self, x1, y1, x2, y2, velocity: int = 500):
         """
