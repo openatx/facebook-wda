@@ -939,7 +939,7 @@ class BaseClient(object):
         [[FBRoute POST:@"/wda/touch/multi/perform"]
         """
         data = dict(actions=actions.data)
-        return self._session_http.post('/wda/touch/multi/perform')
+        return self._session_http.post('/wda/touch/multi/perform', data=data)
 
     def _fast_swipe(self, x1, y1, x2, y2, velocity: int = 500):
         """
