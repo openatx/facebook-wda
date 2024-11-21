@@ -249,7 +249,14 @@ class W3CActions:
     
 
 class TouchMovement:
+    """Represents a touch movement action in WebDriver format.
+    
+    This class helps construct touch movement actions with coordinates
+    and origin element specifications.
+    """
+
     def __init__(self):
+        """Initialize a new touch movement with default action 'moveTo'."""
         self.__data: Dict[str, Any] = {
             "action": "moveTo",
             "options": dict()
@@ -257,21 +264,47 @@ class TouchMovement:
     
     @property
     def data(self) -> Dict[str, Any]:
+        """Get the WebDriver action data representing this movement."""
         return self.__data
     
     def with_xy(self, x: Union[int, float], y: Union[int, float]) -> "TouchMovement":
+        """Set the target coordinates for this movement.
+
+        Args:
+            - x (Union[int, float]): X-coordinate of the target position
+            - y (Union[int, float]): Y-coordinate of the target position
+
+        Returns:
+            Self for method chaining
+        """
         self.__data["options"]["x"] = x
         self.__data["options"]["y"] = y
         return self
     
     def with_origin(self, element_uid: Optional[str]=None) -> "TouchMovement":
+        """Set the origin element for relative coordinates.
+
+        Args:
+            - element_uid (Optional[str]): The unique identifier of the origin element. If None,
+                                         coordinates are relative to viewport
+
+        Returns:
+            Self for method chaining
+        """
         if element_uid is not None:
             self.__data["options"]["element"] = element_uid
         return self
 
 
 class TouchPress:
+    """Represents a touch press action in WebDriver format.
+    
+    This class helps construct touch press actions with coordinates,
+    origin element, and pressure specifications.
+    """
+
     def __init__(self):
+        """Initialize a new touch press with default action 'press'."""
         self.__data: Dict[str, Any] = {
             "action": "press",
             "options": dict()
@@ -279,25 +312,59 @@ class TouchPress:
     
     @property
     def data(self) -> Dict[str, Any]:
+        """Get the WebDriver action data representing this press."""
         return self.__data
     
     def with_xy(self, x: Union[int, float], y: Union[int, float]) -> "TouchPress":
+        """Set the target coordinates for this press.
+
+        Args:
+            - x (Union[int, float]): X-coordinate of the press position
+            - y (Union[int, float]): Y-coordinate of the press position
+
+        Returns:
+            Self for method chaining
+        """
         self.__data["options"]["x"] = x
         self.__data["options"]["y"] = y
         return self
     
     def with_origin(self, element_uid: Optional[str]=None) -> "TouchPress":
+        """Set the origin element for relative coordinates.
+
+        Args:
+            - element_uid (Optional[str]): The unique identifier of the origin element. If None,
+                                         coordinates are relative to viewport
+
+        Returns:
+            Self for method chaining
+        """
         if element_uid is not None:
             self.__data["options"]["element"] = element_uid
         return self
 
     def with_pressure(self, pressure: float) -> "TouchPress":
+        """Set the pressure level for this press.
+
+        Args:
+            - pressure (float): The pressure level of the press, typically between 0.0 and 1.0
+
+        Returns:
+            Self for method chaining
+        """
         self.__data["options"]["pressure"] = pressure
         return self
 
 
 class TouchLongPress:
+    """Represents a touch long press action in WebDriver format.
+    
+    This class helps construct touch long press actions with coordinates
+    and origin element specifications.
+    """
+
     def __init__(self):
+        """Initialize a new touch long press with default action 'longPress'."""
         self.__data: Dict[str, Any] = {
             "action": "longPress",
             "options": dict()
@@ -305,21 +372,47 @@ class TouchLongPress:
     
     @property
     def data(self) -> Dict[str, Any]:
+        """Get the WebDriver action data representing this long press."""
         return self.__data
     
     def with_xy(self, x: Union[int, float], y: Union[int, float]) -> "TouchLongPress":
+        """Set the target coordinates for this long press.
+
+        Args:
+            - x (Union[int, float]): X-coordinate of the long press position
+            - y (Union[int, float]): Y-coordinate of the long press position
+
+        Returns:
+            Self for method chaining
+        """
         self.__data["options"]["x"] = x
         self.__data["options"]["y"] = y
         return self
     
     def with_origin(self, element_uid: Optional[str]=None) -> "TouchLongPress":
+        """Set the origin element for relative coordinates.
+
+        Args:
+            - element_uid (Optional[str]): The unique identifier of the origin element. If None,
+                                         coordinates are relative to viewport
+
+        Returns:
+            Self for method chaining
+        """
         if element_uid is not None:
             self.__data["options"]["element"] = element_uid
         return self
 
 
 class TouchTap:
+    """Represents a touch tap action in WebDriver format.
+    
+    This class helps construct touch tap actions with coordinates,
+    origin element, and tap count specifications.
+    """
+
     def __init__(self):
+        """Initialize a new touch tap with default action 'tap'."""
         self.__data: Dict[str, Any] = {
             "action": "tap",
             "options": dict()
@@ -327,48 +420,126 @@ class TouchTap:
     
     @property
     def data(self) -> Dict[str, Any]:
+        """Get the WebDriver action data representing this tap."""
         return self.__data
     
     def with_xy(self, x: Union[int, float], y: Union[int, float]) -> "TouchTap":
+        """Set the target coordinates for this tap.
+
+        Args:
+            - x (Union[int, float]): X-coordinate of the tap position
+            - y (Union[int, float]): Y-coordinate of the tap position
+
+        Returns:
+            Self for method chaining
+        """
         self.__data["options"]["x"] = x
         self.__data["options"]["y"] = y
         return self
     
     def with_origin(self, element_uid: Optional[str]=None) -> "TouchTap":
+        """Set the origin element for relative coordinates.
+
+        Args:
+            - element_uid (Optional[str]): The unique identifier of the origin element. If None,
+                                         coordinates are relative to viewport
+
+        Returns:
+            Self for method chaining
+        """
         if element_uid is not None:
             self.__data["options"]["element"] = element_uid
         return self
     
     def with_count(self, count: int) -> "TouchTap":
+        """Set the number of taps to perform.
+
+        Args:
+            - count (int): Number of times to perform the tap
+
+        Returns:
+            Self for method chaining
+        """
         self.__data["options"]["count"] = count
         return self
 
 
 class TouchActions:
+    """Main class for constructing WebDriver touch actions sequences.
+    
+    This class supports various touch actions including movement, press,
+    long press, tap, pause, release, and cancel operations.
+
+    Removed after wda v7.0.0, use `W3CActions` instead.
+    """
+
     def __init__(self):
+        """Initialize an empty touch actions sequence."""
         self.__data: List[Dict[str, Any]] = []
     
     @property
     def data(self) -> List[Dict[str, Any]]:
+        """Get the complete WebDriver touch actions sequence data."""
         return self.__data
     
     def move(self, movement: TouchMovement) -> "TouchActions":
+        """Add a movement action to the sequence.
+
+        Args:
+            - movement (TouchMovement): A TouchMovement instance describing the movement
+
+        Returns:
+            Self for method chaining
+        """
         self.__data.append(movement.data)
         return self
     
     def press(self, press: TouchPress) -> "TouchActions":
+        """Add a press action to the sequence.
+
+        Args:
+            - press (TouchPress): A TouchPress instance describing the press
+
+        Returns:
+            Self for method chaining
+        """
         self.__data.append(press.data)
         return self
     
     def long_press(self, long_press: TouchLongPress) -> "TouchActions":
+        """Add a long press action to the sequence.
+
+        Args:
+            - long_press (TouchLongPress): A TouchLongPress instance describing the long press
+
+        Returns:
+            Self for method chaining
+        """
         self.__data.append(long_press.data)
         return self
 
     def tap(self, tap: TouchTap) -> "TouchActions":
+        """Add a tap action to the sequence.
+
+        Args:
+            - tap (TouchTap): A TouchTap instance describing the tap
+
+        Returns:
+            Self for method chaining
+        """
         self.__data.append(tap.data)
         return self
     
     def pause(self, second: float=0.5) -> "TouchActions":
+        """Add a pause to the sequence.
+
+        Args:
+            - second (float): Duration to pause in seconds, defaults to 0.5. If negative,
+                            defaults to 0.5
+
+        Returns:
+            Self for method chaining
+        """
         if second < 0:
             second = 0.5
         self.__data.append({
@@ -380,8 +551,19 @@ class TouchActions:
         return self
     
     def up(self) -> "TouchActions":
+        """Add a touch release action to the sequence.
+
+        Returns:
+            Self for method chaining
+        """
         self.__data.append({"action": "release"})
         return self
     
     def cancel(self) -> "TouchActions":
+        """Add a cancel action to the sequence.
+
+        Returns:
+            Self for method chaining
+        """
         self.__data.append({"action": "cancel"})
+        return self
