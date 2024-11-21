@@ -30,7 +30,7 @@ from wda.exceptions import *
 from wda.usbmux import fetch
 from wda.usbmux.pyusbmux import list_devices, select_device
 from wda.utils import inject_call, limit_call_depth, AttrDict, convert
-from wda.w3c_actions import W3CActions
+from wda.w3c_actions import W3CActions, TouchActions
 
 
 try:
@@ -916,6 +916,8 @@ class BaseClient(object):
         """
         Perform a sequence of w3c actions, appium forked version of wda only
 
+        For wda versions previous to v7.0.0, use `perform_touch_actions`
+
         Args:
             - actions (W3CActions): The W3C actions sequence
         
@@ -923,6 +925,21 @@ class BaseClient(object):
         """
         data = dict(actions=actions.data)
         return self._session_http.post('/actions', data=data)
+    
+    def perform_touch_actions(self, actions: TouchActions):
+        """
+        Perform a sequence of touch actions, appium forked version of wda only
+
+        Removed in wda version v7.0.0, for versions after that, use `perform_w3c_touch_actions`
+
+        Args:
+            - actions (TouchActions): The actions sequence
+        
+        [[FBRoute POST:@"/wda/touch/perform"] respondWithTarget:self action:@selector(handlePerformAppiumTouchActions:)]
+        [[FBRoute POST:@"/wda/touch/multi/perform"]
+        """
+        data = dict(actions=actions.data)
+        return self._session_http.post('/wda/touch/multi/perform')
 
     def _fast_swipe(self, x1, y1, x2, y2, velocity: int = 500):
         """

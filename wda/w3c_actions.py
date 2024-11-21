@@ -123,6 +123,8 @@ class FingerAction:
         Returns:
             Self for method chaining
         """
+        if second < 0:
+            second = 0.5
         self.__data.append({"type": "pause", "duration": second * 1000})
         return self
 
@@ -244,3 +246,142 @@ class W3CActions:
         action = FingerAction().move(movement_from).down().pause(press_seconds).move(movement_to).pause(hold_seconds).up()
         self.inject_touch_actions(action)
         return self
+    
+
+class TouchMovement:
+    def __init__(self):
+        self.__data: Dict[str, Any] = {
+            "action": "moveTo",
+            "options": dict()
+        }
+    
+    @property
+    def data(self) -> Dict[str, Any]:
+        return self.__data
+    
+    def with_xy(self, x: Union[int, float], y: Union[int, float]) -> "TouchMovement":
+        self.__data["options"]["x"] = x
+        self.__data["options"]["y"] = y
+        return self
+    
+    def with_origin(self, element_uid: Optional[str]=None) -> "TouchMovement":
+        if element_uid is not None:
+            self.__data["options"]["element"] = element_uid
+        return self
+
+
+class TouchPress:
+    def __init__(self):
+        self.__data: Dict[str, Any] = {
+            "action": "press",
+            "options": dict()
+        }
+    
+    @property
+    def data(self) -> Dict[str, Any]:
+        return self.__data
+    
+    def with_xy(self, x: Union[int, float], y: Union[int, float]) -> "TouchPress":
+        self.__data["options"]["x"] = x
+        self.__data["options"]["y"] = y
+        return self
+    
+    def with_origin(self, element_uid: Optional[str]=None) -> "TouchPress":
+        if element_uid is not None:
+            self.__data["options"]["element"] = element_uid
+        return self
+
+    def with_pressure(self, pressure: float) -> "TouchPress":
+        self.__data["options"]["pressure"] = pressure
+        return self
+
+
+class TouchLongPress:
+    def __init__(self):
+        self.__data: Dict[str, Any] = {
+            "action": "longPress",
+            "options": dict()
+        }
+    
+    @property
+    def data(self) -> Dict[str, Any]:
+        return self.__data
+    
+    def with_xy(self, x: Union[int, float], y: Union[int, float]) -> "TouchLongPress":
+        self.__data["options"]["x"] = x
+        self.__data["options"]["y"] = y
+        return self
+    
+    def with_origin(self, element_uid: Optional[str]=None) -> "TouchLongPress":
+        if element_uid is not None:
+            self.__data["options"]["element"] = element_uid
+        return self
+
+
+class TouchTap:
+    def __init__(self):
+        self.__data: Dict[str, Any] = {
+            "action": "tap",
+            "options": dict()
+        }
+    
+    @property
+    def data(self) -> Dict[str, Any]:
+        return self.__data
+    
+    def with_xy(self, x: Union[int, float], y: Union[int, float]) -> "TouchTap":
+        self.__data["options"]["x"] = x
+        self.__data["options"]["y"] = y
+        return self
+    
+    def with_origin(self, element_uid: Optional[str]=None) -> "TouchTap":
+        if element_uid is not None:
+            self.__data["options"]["element"] = element_uid
+        return self
+    
+    def with_count(self, count: int) -> "TouchTap":
+        self.__data["options"]["count"] = count
+        return self
+
+
+class TouchActions:
+    def __init__(self):
+        self.__data: List[Dict[str, Any]] = []
+    
+    @property
+    def data(self) -> List[Dict[str, Any]]:
+        return self.__data
+    
+    def move(self, movement: TouchMovement) -> "TouchActions":
+        self.__data.append(movement.data)
+        return self
+    
+    def press(self, press: TouchPress) -> "TouchActions":
+        self.__data.append(press.data)
+        return self
+    
+    def long_press(self, long_press: TouchLongPress) -> "TouchActions":
+        self.__data.append(long_press.data)
+        return self
+
+    def tap(self, tap: TouchTap) -> "TouchActions":
+        self.__data.append(tap.data)
+        return self
+    
+    def pause(self, second: float=0.5) -> "TouchActions":
+        if second < 0:
+            second = 0.5
+        self.__data.append({
+            "action": "wait",
+            "options": {
+                "ms": second * 1000
+            }
+        })
+        return self
+    
+    def up(self) -> "TouchActions":
+        self.__data.append({"action": "release"})
+        return self
+    
+    def cancel(self) -> "TouchActions":
+        self.__data.append({"action": "cancel"})
