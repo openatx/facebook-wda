@@ -898,9 +898,9 @@ class BaseClient(object):
         Args:
             - x1, y1, x2, y2 (Union[int, float]): The start and end coordinates if all value is of `int` type, otherwise the start
                 and end percentage of screen axis
-            - press_duration (float): the duration before swiping
-            - hold_duration (float): the duration after swiping
-            - velocity (float): the velocity of swiping
+            - press_duration (float): the duration before swiping (seconds)
+            - hold_duration (float): the duration after swiping (seconds)
+            - velocity (float): the velocity of swiping (pixels per second)
         
         [[FBRoute POST:@"/wda/pressAndDragWithVelocity"] respondWithTarget:self action:@selector(handlePressAndDragCoordinateWithVelocity:)]
         """
@@ -912,7 +912,15 @@ class BaseClient(object):
         data = dict(fromX=x1, fromY=y1, toX=x2, toY=y2, pressDuration=press_duration, velocity=velocity, holdDuration=hold_duration)
         return self._session_http.post('/wda/pressAndDragWithVelocity', data=data)
     
-    def performW3CTouchActions(self, actions: W3CActions):
+    def perform_w3c_touch_actions(self, actions: W3CActions):
+        """
+        Perform a sequence of w3c actions, appium forked version of wda only
+
+        Args:
+            - actions (W3CActions): The W3C actions sequence
+        
+        [[FBRoute POST:@"/actions"] respondWithTarget:self action:@selector(handlePerformW3CTouchActions:)]
+        """
         data = dict(actions=actions.data)
         return self._session_http.post('/actions', data=data)
 
