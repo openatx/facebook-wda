@@ -243,7 +243,7 @@ class W3CActions:
         """
         movement_from = FingerMovement().with_xy(from_x, from_y).with_origin(element_uid)
         movement_to = FingerMovement().with_xy(to_x, to_y).with_origin(element_uid).with_duration(swipe_seconds)
-        action = FingerAction().move(movement_from).down().pause(press_seconds).move(movement_to).pause(hold_seconds).up()
+        action = FingerAction().move(movement_from).down().pause(press_seconds).move(movement_from).move(movement_to).pause(hold_seconds).up()
         self.inject_touch_actions(action)
         return self
     
