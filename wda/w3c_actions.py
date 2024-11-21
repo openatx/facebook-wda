@@ -1,5 +1,6 @@
 # coding: utf-8
 
+from math import sqrt
 from typing import Any, Dict, List, Optional, Union
 
 class FingerMovement:
@@ -566,4 +567,47 @@ class TouchActions:
             Self for method chaining
         """
         self.__data.append({"action": "cancel"})
+        return self
+    
+    def swipe(self, from_x: Union[int, float], from_y: Union[int, float],
+              to_x: Union[int, float], to_y: Union[int, float], element_uid: Optional[str]=None,
+              press_seconds: float=0.25, swipe_seconds: Optional[float]=None,
+              delta: float=10, hold_seconds: float=0.25, up: bool=True) -> "TouchActions":
+        """Add a swipe gesture from one point to another.
+
+        Args:
+            - from_x (Union[int, float]): Starting X-coordinate
+            - from_y (Union[int, float]): Starting Y-coordinate
+            - to_x (Union[int, float]): Ending X-coordinate
+            - to_y (Union[int, float]): Ending Y-coordinate
+            - element_uid (Optional[str]): Optional element to use as coordinate origin
+            - press_seconds (float): Duration to hold before starting the swipe
+            - swipe_seconds (Optional[float]): Duration of the swipe movement (None for instant)
+            - delta (float): The movement is broken down to small steps,
+                             this delta describes the delta of each step
+            - hold_seconds (float): Duration to hold after completing the swipe
+            - up (bool): Whether to lift up after swiping, default to true
+
+        Returns:
+            Self for method chaining
+        """
+        if swipe_seconds is None:
+            self.press(TouchPress().with_xy(from_x, from_y).with_origin(element_uid)).pause(press_seconds)
+            self.move(TouchMovement().with_xy(to_x, to_y).with_origin(element_uid)).pause(hold_seconds)
+            if up:
+                self.up()
+        else:
+            distance = sqrt(pow(to_y - from_y, 2) + pow(to_x - from_x, 2))
+            steps = int(distance / delta)
+
+            dx = float(to_x - from_x) / steps
+            dy = float(to_y - from_y) / steps
+            interval = float(swipe_seconds) / steps
+            
+            self.press(TouchPress().with_xy(from_x, from_y).with_origin(element_uid)).pause(press_seconds)
+            for i in range(1, steps + 1):
+                self.move(TouchMovement().with_xy(from_x + i * dx, from_y + i * dy).with_origin(element_uid)).pause(interval)
+            self.move(TouchMovement().with_xy(from_x + steps * dx, from_y + steps * dy).with_origin(element_uid)).pause(hold_seconds)
+            if up:
+                self.up()
         return self
