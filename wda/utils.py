@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import functools
+import threading
 import typing
 import inspect
 
@@ -34,21 +35,21 @@ def limit_call_depth(n: int):
     n = 0 means not allowed recursive call
     """
     def wrapper(fn: typing.Callable):
-        if not hasattr(fn, '_depth'):
-            fn._depth = 0
-
+        local = threading.local()
+        
         @functools.wraps(fn)
         def _inner(*args, **kwargs):
-            if fn._depth > n:
+            if not hasattr(local, 'depth'):
+                local.depth = 0
+            if local.depth > n:
                 raise RuntimeError("call depth exceed %d" % n)
 
-            fn._depth += 1
+            local.depth += 1
             try:
                 return fn(*args, **kwargs)
             finally:
-                fn._depth -= 1
+                local.depth -= 1
         
-        _inner._fn = fn
         return _inner
     
     return wrapper
