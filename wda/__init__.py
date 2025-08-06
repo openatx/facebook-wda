@@ -740,9 +740,8 @@ class BaseClient(object):
         self.app_launch(current_app_bundle_id)
         return base64.b64decode(clipboard_text).decode('utf-8')
     
-    # Not working
-    # def siri_activate(self, text):
-    #    self.http.post("/wda/siri/activate", {"text": text})
+    def siri_activate(self, text):
+       self._session_http.post("/wda/siri/activate", {"text": text})
 
     def app_launch(self,
                    bundle_id,
