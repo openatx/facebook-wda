@@ -246,7 +246,7 @@ s.set_clipboard("Hello world") # update clipboard
 # Requires pillow, installed by "pip install pillow"
 s.screenshot().save("s.png")
 
-s.siri_activate("How's the weather today") # activeate siri
+s.siri_activate("How's the weather today") # activate siri
 
 
 # Sometimes screenshot rotation is wrong, but we can rotate it to the right direction
