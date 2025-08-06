@@ -17,7 +17,7 @@ import subprocess
 import threading
 import time
 from collections import defaultdict, namedtuple
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, Dict, NamedTuple
 from urllib.parse import urlparse
 
 import retry
@@ -58,6 +58,13 @@ PORTRAIT = 'PORTRAIT'
 LANDSCAPE_RIGHT = 'UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT'
 PORTRAIT_UPSIDEDOWN = 'UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN'
 
+class HTTPRequest(NamedTuple):
+    fetch: Callable[..., AttrDict]
+    get: Callable[[str, Optional[Dict], Optional[float]], AttrDict]
+    post: Callable[[str, Optional[Dict], Optional[float]], AttrDict]
+
+class HTTPSessionRequest(HTTPRequest):
+    delete: Callable[[str, Optional[Dict], Optional[float]], AttrDict]
 
 class Status(enum.IntEnum):
     # 不是怎么准确，status在mds平台上变来变去的
@@ -401,14 +408,14 @@ class BaseClient(object):
 
     @property
     def http(self):
-        return namedtuple("HTTPRequest", ['fetch', 'get', 'post'])(
+        return HTTPRequest(
             self._fetch,
             functools.partial(self._fetch, "GET"),
             functools.partial(self._fetch, "POST"))  # yapf: disable
 
     @property
     def _session_http(self):
-        return namedtuple("HTTPSessionRequest", ['fetch', 'get', 'post', 'delete'])(
+        return HTTPSessionRequest(
             functools.partial(self._fetch, with_session=True),
             functools.partial(self._fetch, "GET", with_session=True),
             functools.partial(self._fetch, "POST", with_session=True),
