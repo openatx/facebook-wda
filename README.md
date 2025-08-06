@@ -145,9 +145,6 @@ c.home()
 # Hit healthcheck
 c.healthcheck()
 
-# 
-c.
-
 # Get page source
 c.source() # format XML
 c.source(accessible=True) # default false, format JSON
