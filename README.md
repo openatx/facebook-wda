@@ -145,6 +145,9 @@ c.home()
 # Hit healthcheck
 c.healthcheck()
 
+# 
+c.
+
 # Get page source
 c.source() # format XML
 c.source(accessible=True) # default false, format JSON
@@ -245,6 +248,9 @@ s.set_clipboard("Hello world") # update clipboard
 # Screenshot return PIL.Image
 # Requires pillow, installed by "pip install pillow"
 s.screenshot().save("s.png")
+
+s.siri_activate("How's the weather today") # activeate siri
+
 
 # Sometimes screenshot rotation is wrong, but we can rotate it to the right direction
 # Refs: https://pillow.readthedocs.io/en/3.1.x/reference/Image.html#PIL.Image.Image.transpose
