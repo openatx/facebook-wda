@@ -417,7 +417,7 @@ class BaseClient(object):
             functools.partial(self._fetch, "POST"))
 
     @property
-    def _session_http(self) -> HTTPRequest:
+    def _session_http(self) -> HTTPSessionRequest:
         return HTTPSessionRequest(
             functools.partial(self._fetch, with_session=True),
             functools.partial(self._fetch, "GET", with_session=True),
