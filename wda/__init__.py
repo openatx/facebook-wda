@@ -60,14 +60,14 @@ PORTRAIT_UPSIDEDOWN = 'UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN'
 
 class HTTPRequest(NamedTuple):
     fetch: Callable[..., AttrDict]
-    get: Callable[[str, Optional[Dict], Optional[float]], AttrDict]
-    post: Callable[[str, Optional[Dict], Optional[float]], AttrDict]
+    get: Callable[..., AttrDict]
+    post: Callable[..., AttrDict]
 
 class HTTPSessionRequest(NamedTuple):
     fetch: Callable[..., AttrDict]
-    get: Callable[[str, Optional[Dict], Optional[float]], AttrDict]
-    post: Callable[[str, Optional[Dict], Optional[float]], AttrDict]
-    delete: Callable[[str, Optional[Dict], Optional[float]], AttrDict]
+    get: Callable[..., AttrDict]
+    post: Callable[..., AttrDict]
+    delete: Callable[..., AttrDict]
 
 class Status(enum.IntEnum):
     # 不是怎么准确，status在mds平台上变来变去的
@@ -409,20 +409,36 @@ class BaseClient(object):
             else:
                 raise
 
+
     @property
     def http(self) -> HTTPRequest:
+        # Ensure get/post can be called as get("/")
+        def get(url, data: Optional[Dict] = None, timeout: Optional[float] = None):
+            return self._fetch("GET", url, data, timeout=timeout)
+        def post(url, data: Optional[Dict] = None, timeout: Optional[float] = None):
+            return self._fetch("POST", url, data, timeout=timeout)
         return HTTPRequest(
             self._fetch,
-            functools.partial(self._fetch, "GET"),
-            functools.partial(self._fetch, "POST"))
+            get,
+            post)
+
 
     @property
     def _session_http(self) -> HTTPSessionRequest:
+        # Ensure get/post/delete can be called as get("/")
+        def fetch(method, url, data: Optional[Dict] = None, timeout: Optional[float] = None):
+            return self._fetch(method, url, data, with_session=True, timeout=timeout)
+        def get(url, data: Optional[Dict] = None, timeout: Optional[float] = None):
+            return self._fetch("GET", url, data, with_session=True, timeout=timeout)
+        def post(url, data: Optional[Dict] = None, timeout: Optional[float] = None):
+            return self._fetch("POST", url, data, with_session=True, timeout=timeout)
+        def delete(url, data: Optional[Dict] = None, timeout: Optional[float] = None):
+            return self._fetch("DELETE", url, data, with_session=True, timeout=timeout)
         return HTTPSessionRequest(
-            functools.partial(self._fetch, with_session=True),
-            functools.partial(self._fetch, "GET", with_session=True),
-            functools.partial(self._fetch, "POST", with_session=True),
-            functools.partial(self._fetch, "DELETE", with_session=True))
+            fetch,
+            get,
+            post,
+            delete)
 
     def home(self):
         """Press home button"""
@@ -727,7 +743,7 @@ class BaseClient(object):
         """
         pass
 
-    def get_clipboard(self, wda_bundle_id="com.facebook.WebDriverAgentRunner.xctrunner"):
+    def get_clipboard(self):
         """ Get clipboard text.
 
         If you want to use this function, you have to set wda foreground which would switch the 
