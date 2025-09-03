@@ -212,25 +212,6 @@ class Rect(list):
         return self.y + self.height
 
 
-def _start_wda_xctest(udid: str, wda_bundle_id=None) -> bool:
-    xctool_path = shutil.which("tins2") or shutil.which("tidevice")
-    if not xctool_path:
-        return False
-    logger.info("WDA is not running, exec: {} xctest".format(xctool_path))
-    args = []
-    if udid:
-        args.extend(['-u', udid])
-    args.append('xctest')
-    if wda_bundle_id:
-        args.extend(['-B', wda_bundle_id])
-    p = subprocess.Popen([xctool_path] + args)
-    time.sleep(3)
-    if p.poll() is not None:
-        logger.warning("xctest launch failed")
-        return False
-    return True
-
-
 class BaseClient(object):
     def __init__(self, url=None, _session_id=None):
         """
@@ -255,12 +236,6 @@ class BaseClient(object):
         if not _session_id:
             self._init_callback()
 
-        # u = urllib.parse.urlparse(self.__wda_url)
-        # if u.scheme == "http+usbmux" and not self.is_ready():
-        #     udid = u.netloc.split(":")[0]
-        #     if _start_wda_xctest(udid):
-        #         self.wait_ready()
-                # raise RuntimeError("xctest start failed")
 
     def _callback_fix_invalid_session_id(self, err: WDAError):
         """ 当遇到 invalid session id错误时，更新session id并重试 """
@@ -366,7 +341,7 @@ class BaseClient(object):
     def callbacks(self):
         return self.__callbacks
 
-    @limit_call_depth(4)
+    @limit_call_depth(10)
     def _fetch(self,
                method: str,
                urlpath: str,
@@ -1787,7 +1762,7 @@ class Element(object):
 class USBClient(Client):
     """ connect device through unix:/var/run/usbmuxd """
 
-    def __init__(self, udid: str = "", port: int = 8100, wda_bundle_id=None):
+    def __init__(self, udid: str = "", port: int = 8100):
         if not udid:
             infos = [info for info in list_devices() if info.connection_type == 'USB']
             if len(infos) == 0:
@@ -1800,6 +1775,5 @@ class USBClient(Client):
         if self.is_ready():
             return
 
-        _start_wda_xctest(udid, wda_bundle_id)
         if not self.wait_ready(timeout=20):
             raise RuntimeError("wda xctest launched but check failed")
