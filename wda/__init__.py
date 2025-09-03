@@ -1775,5 +1775,4 @@ class USBClient(Client):
         if self.is_ready():
             return
 
-        if not self.wait_ready(timeout=20):
-            raise RuntimeError("wda xctest launched but check failed")
+            raise RuntimeError("WDA is not ready after waiting for 20 seconds")
