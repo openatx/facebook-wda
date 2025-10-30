@@ -1347,7 +1347,7 @@ class Selector(object):
         if s is None:
             return
         re_element = '|'.join(xcui_element_types.ELEMENTS)
-        return re.sub(r'/(' + re_element + ')', '/XCUIElementType\g<1>', s)
+        return re.sub(r'/(' + re_element + ')', r'/XCUIElementType\g<1>', s)
 
     def _add_escape_character_for_quote_prime_character(self, text):
         """
@@ -1772,7 +1772,5 @@ class USBClient(Client):
             udid = infos[0].serial
 
         super().__init__(url=f"http+usbmux://{udid}:{port}")
-        if self.is_ready():
-            return
-
+        if not self.wait_ready(timeout=20, noprint=True):
             raise RuntimeError("WDA is not ready after waiting for 20 seconds")
