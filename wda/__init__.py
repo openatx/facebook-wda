@@ -1762,7 +1762,10 @@ class Element(object):
 class USBClient(Client):
     """ connect device through unix:/var/run/usbmuxd """
 
-    def __init__(self, udid: str = "", port: int = 8100, wda_bundle_id: str = None):
+    def __init__(self, udid: str = "", port: int = 8100, wda_bundle_id: Optional[str] = None):
+        """
+        wda_bundle_id: useless now, just for compability
+        """
         if not udid:
             infos = [info for info in list_devices() if info.connection_type == 'USB']
             if len(infos) == 0:
@@ -1772,5 +1775,5 @@ class USBClient(Client):
             udid = infos[0].serial
 
         super().__init__(url=f"http+usbmux://{udid}:{port}")
-        if not self.wait_ready(timeout=20, noprint=True):
-            raise RuntimeError("WDA is not ready after waiting for 20 seconds")
+        # if not self.wait_ready(timeout=20, noprint=True):
+        #     raise RuntimeError("WDA is not ready after waiting for 20 seconds")
