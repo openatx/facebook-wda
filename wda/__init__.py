@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function, unicode_literals
+from __future__ import print_function, unicode_literals,annotations
 
 import base64
 import contextlib
@@ -1584,6 +1584,9 @@ class Element(object):
 
     def __repr__(self):
         return '<wda.Element(id="{}")>'.format(self._id)
+
+    def __eq__(self, other: Element):
+        return self._id == other._id
 
     @property
     def http(self):
