@@ -109,8 +109,8 @@ class MuxDevice:
     def matches_udid(self, udid: str) -> bool:
         return self.serial.replace('-', '') == udid.replace('-', '')
 
-    def make_http_connection(self, port: int) -> HTTPConnection:
-        return USBMuxHTTPConnection(self, port)
+    def make_http_connection(self, port: int, usbmux_address: Optional[str] = None) -> HTTPConnection:
+        return USBMuxHTTPConnection(self, port, usbmux_address=usbmux_address)
 
 
 class SafeStreamSocket:
@@ -470,13 +470,14 @@ def select_devices_by_connection_type(connection_type: str, usbmux_address: Opti
 
 
 class USBMuxHTTPConnection(HTTPConnection):
-    def __init__(self, device: MuxDevice, port=8100):
+    def __init__(self, device: MuxDevice, port=8100, usbmux_address: Optional[str] = None):
         super().__init__("localhost", port)
         self.__device = device
         self.__port = port
+        self.__usbmux_address = usbmux_address
 
     def connect(self):
-        self.sock = self.__device.connect(self.__port)
+        self.sock = self.__device.connect(self.__port, self.__usbmux_address)
 
     def __enter__(self) -> HTTPConnection:
         return self

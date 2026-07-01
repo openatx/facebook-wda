@@ -222,7 +222,7 @@ class BaseClient(object):
         """
         if not url:
             url = os.environ.get('DEVICE_URL', 'http://localhost:8100')
-        assert re.match(r"^(http\+usbmux|https?)://", url), "Invalid URL: %r" % url
+        assert re.match(r"^(http\+usbmux|http\+usbmux\+remote|https?)://", url), "Invalid URL: %r" % url
 
         # Session variable
         self.__wda_url = url

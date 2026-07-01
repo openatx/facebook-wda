@@ -19,6 +19,11 @@ def http_create(url: str) -> HTTPConnection:
         udid, device_wda_port = u.netloc.split(":")
         device = select_device(udid)
         return device.make_http_connection(int(device_wda_port))
+    elif u.scheme == "http+usbmux+remote":
+        device_info, usbmux_address = u.netloc.split("@")
+        udid, device_wda_port = device_info.split(":")
+        device = select_device(udid, usbmux_address=usbmux_address)
+        return device.make_http_connection(int(device_wda_port), usbmux_address=usbmux_address)
     elif u.scheme == "http":
         return HTTPConnection(u.netloc)
     elif u.scheme == "https":
@@ -50,6 +55,7 @@ def fetch(url: str, method="GET", data=None, timeout=None, chunk_size: int = _DE
     Raises:
         HTTPError
     """
+    conn = None
     try:
         method = method.upper()
         conn = http_create(url)
@@ -67,6 +73,9 @@ def fetch(url: str, method="GET", data=None, timeout=None, chunk_size: int = _DE
         return resp
     except Exception as e:
         raise HTTPError(e)
+    finally:
+        if conn:
+            conn.close()
 
 
 def _read_response(response:HTTPResponse, chunk_size: int = _DEFAULT_CHUNK_SIZE) -> bytearray:
