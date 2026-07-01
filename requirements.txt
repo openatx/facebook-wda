@@ -2,5 +2,5 @@ six
 retry
 Pillow
 cached-property~=1.5.1
-Deprecated~=1.2.6
+Deprecated>=1.2.6
 construct>=2
