@@ -1404,15 +1404,17 @@ class Selector(object):
         if self._value_part:
             qs.append("value CONTAINS '%s'" % self._value_part)
         if self._visible is not None:
-            qs.append("visible == %s" % 'true' if self._visible else 'false')
+            qs.append("visible == %s" % ('true' if self._visible else 'false'))
         if self._enabled is not None:
-            qs.append("enabled == %s" % 'true' if self._enabled else 'false')
+            qs.append("enabled == %s" % ('true' if self._enabled else 'false'))
         predicate = ' AND '.join(qs)
         chain = '/' + (self._class_name or 'XCUIElementTypeAny')
         if predicate:
             chain = chain + '[`' + predicate + '`]'
         if self._index:
-            chain = chain + '[%d]' % self._index
+            # class chain position starts at 1, negative counts from the end
+            position = self._index + 1 if self._index > 0 else self._index
+            chain = chain + '[%d]' % position
         return chain
 
     @retry.retry(WDAStaleElementReferenceError, tries=3, delay=.5, jitter=.2)
@@ -1502,7 +1504,10 @@ class Selector(object):
 
     @property
     def exists(self):
-        return len(self.find_element_ids()) > self._index
+        if self._id or self._predicate or self._xpath or self._class_chain:
+            return len(self.find_element_ids()) > self._index
+        # the class chain already carries the index
+        return len(self.find_element_ids()) > 0
 
     def click(self, timeout: Optional[float] = None):
         """
